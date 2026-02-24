@@ -9,8 +9,24 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // CORS configuration
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "*",
+  "https://perfectlabeler.onrender.com",
+];
+
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1 || (process.env.FRONTEND_URL && process.env.FRONTEND_URL.split(",").map(url => url.trim()).includes(origin))) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -42,6 +58,7 @@ const printerRoute = require("./Route/PrinterRoute");
 const templateRoute = require("./Route/TemplateRoute");
 const printJobRoute = require("./Route/PrintJobRoute");
 const assetRoute = require("./Route/AssetRoute");
+const aiRoute = require("./Route/AIRoute");
 
 // Use routes
 app.use(loginRoute);
@@ -50,6 +67,7 @@ app.use(printerRoute);
 app.use(templateRoute);
 app.use(printJobRoute);
 app.use(assetRoute);
+app.use(aiRoute);
 
 // Health check endpoint
 app.get("/", (req, res) => {

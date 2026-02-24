@@ -1,6 +1,7 @@
 // API Configuration
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://cloud-printing-sss.onrender.com";
+  import.meta.env.VITE_API_URL
+// "https://cloud-printing-sss.onrender.com";
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -43,6 +44,10 @@ export const API_ENDPOINTS = {
   ASSET_SCAN: (code) => `${API_BASE_URL}/api/assets/scan/${code}`,
   ASSET_MOVE: (id) => `${API_BASE_URL}/api/assets/${id}/move`,
   ASSET_STATS: `${API_BASE_URL}/api/assets/stats/summary`,
+
+  // AI Label Generation
+  AI_GENERATE_LABEL: `${API_BASE_URL}/api/ai/generate-label`,
+  AI_CHAT: `${API_BASE_URL}/api/ai/chat`,
 };
 
 // Helper function to get auth headers

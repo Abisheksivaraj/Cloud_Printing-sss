@@ -28,7 +28,7 @@ export const AppHeader = ({ onNavigate }) => {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-sm md:text-base font-black tracking-tight leading-none" style={{ color: theme.text }}>
-                  Label Manager
+                  Perfect Labeler
                 </h1>
                 <span className="text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-[0.2em]">
                   Pro Edition
