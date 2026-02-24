@@ -15,7 +15,8 @@ import {
   Table,
   Columns,
   Barcode,
-  ArrowDown
+  ArrowDown,
+  Info
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useTheme } from "../../ThemeContext";
@@ -61,6 +62,21 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated }) => {
       AZTEC: "Aztec Code",
     };
     return barcodeTypeNames[barcodeType] || "Barcode";
+  };
+
+  const getBarcodeIcon = (barcodeType) => {
+    const icons = {
+      QR: "📱",
+      DATAMATRIX: "🔳",
+      PDF417: "📄",
+      AZTEC: "💠",
+      CODE128: "|||",
+      CODE39: "|||",
+      EAN13: "|||",
+      EAN8: "|||",
+      UPC: "|||",
+    };
+    return icons[barcodeType] || "|||";
   };
 
   // Search functionality
