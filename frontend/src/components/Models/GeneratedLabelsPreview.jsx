@@ -8,6 +8,7 @@ import {
   Target,
 } from "lucide-react";
 import BarcodeElement from "../designer/code";
+import { printService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
 
 const MM_TO_PX = 3.7795275591;
 
@@ -310,10 +311,60 @@ const RollPrinterPreview = ({ labels, labelSettings, onClose }) => {
     1,
   );
 
-  const handlePrintAll = () => {
-    setTimeout(() => {
+  const handlePrintAll = async () => {
+    try {
+      // Get current printer info or default
+      let printerName = "System Default";
+      try {
+        const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
+        if (printersData.printers?.length > 0) {
+          const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
+          printerName = defaultPrinter.name;
+        }
+      } catch (e) {
+        console.warn("Could not fetch printer info", e);
+      }
+
+      // Calculate print metrics
+      const totalAvailable = labels[0]?.importContext?.totalAvailable || labels.length;
+      const printedRecords = labels.length;
+      const printedLengthMm = (rollHeight / MM_TO_PX).toFixed(1);
+
+      // Create print job record
+      const jobData = {
+        printerName,
+        documentName: labels[0]?.templateName ? `Bulk Print - ${labels[0].templateName}` : `Bulk Print - ${labels.length} Labels`,
+        documentType: "label",
+        copies: labels.length,
+        priority: "normal",
+        status: "pending",
+        totalRecords: totalAvailable,
+        printedRecords: printedRecords,
+        printedLength: parseFloat(printedLengthMm),
+        sourceData: labels[0]?.importContext?.sourceData || [],
+        metadata: {
+          labelWidth: labelSize.width,
+          labelHeight: labelSize.height,
+          columns,
+          isBulk: true,
+          mappings: labels[0]?.importContext?.mappings || {}
+        }
+      };
+
+      const { job } = await printService.createJob(jobData);
+
+      // Trigger browser print
       window.print();
-    }, 500);
+
+      // Update status to completed
+      setTimeout(() => {
+        printService.updateStatus(job._id, "completed");
+      }, 2000);
+
+    } catch (error) {
+      console.error("Print tracking failed:", error);
+      window.print();
+    }
   };
 
   return (

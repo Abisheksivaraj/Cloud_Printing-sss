@@ -6,11 +6,12 @@ const { authenticateToken, isAdmin } = require("../middleware/auth");
 // Get all label templates
 router.get("/api/templates", authenticateToken, async (req, res) => {
     try {
-        const { category, isPublic } = req.query;
+        const { category, isPublic, status } = req.query;
 
         const filter = {};
         if (category) filter.category = category;
         if (isPublic !== undefined) filter.isPublic = isPublic === "true";
+        if (status) filter.status = status;
 
         const templates = await LabelTemplate.find(filter)
             .populate("createdBy", "userName email")
@@ -70,6 +71,7 @@ router.post("/api/templates", authenticateToken, isAdmin, async (req, res) => {
             elements,
             previewImage,
             isPublic,
+            status,
         } = req.body;
 
         if (!name || !dimensions || !dimensions.width || !dimensions.height) {
@@ -88,6 +90,7 @@ router.post("/api/templates", authenticateToken, isAdmin, async (req, res) => {
             elements: elements || [], // Accept elements directly
             previewImage,
             isPublic: isPublic !== undefined ? isPublic : true,
+            status: status || "draft",
             createdBy: req.user.id,
         });
 
@@ -120,6 +123,7 @@ router.put("/api/templates/:id", authenticateToken, isAdmin, async (req, res) =>
             elements,
             previewImage,
             isPublic,
+            status,
         } = req.body;
 
         const updateData = {};
@@ -131,6 +135,7 @@ router.put("/api/templates/:id", authenticateToken, isAdmin, async (req, res) =>
         if (elements) updateData.elements = elements;
         if (previewImage !== undefined) updateData.previewImage = previewImage;
         if (isPublic !== undefined) updateData.isPublic = isPublic;
+        if (status) updateData.status = status;
 
         const template = await LabelTemplate.findByIdAndUpdate(
             req.params.id,

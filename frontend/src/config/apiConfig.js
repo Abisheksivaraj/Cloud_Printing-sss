@@ -132,4 +132,35 @@ export const authService = {
   },
 };
 
+export const printService = {
+  getHistory: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const url = `${API_ENDPOINTS.PRINT_JOBS}${query ? `?${query}` : ""}`;
+    return await apiCall(url);
+  },
+
+  getJob: async (id) => {
+    return await apiCall(API_ENDPOINTS.PRINT_JOB_BY_ID(id));
+  },
+
+  createJob: async (jobData) => {
+    return await apiCall(API_ENDPOINTS.PRINT_JOBS, {
+      method: "POST",
+      body: JSON.stringify(jobData),
+    });
+  },
+
+  updateStatus: async (id, status, errorMessage = null) => {
+    const url = API_ENDPOINTS.PRINT_JOB_STATUS(id);
+    return await apiCall(url, {
+      method: "PUT",
+      body: JSON.stringify({ status, errorMessage }),
+    });
+  },
+
+  getStats: async () => {
+    return await apiCall(API_ENDPOINTS.PRINT_JOB_STATS);
+  },
+};
+
 export default API_BASE_URL;

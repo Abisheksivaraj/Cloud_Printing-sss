@@ -7,6 +7,8 @@ import {
 import LabelDesigner from "./components/LabelDesign";
 import Signup from "./components/admin/Signup";
 import Login from "./components/admin/Login";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import PrintHistory from "./components/PrintHistory";
 import { useTheme } from "./ThemeContext";
 import { authService, API_ENDPOINTS, apiCall } from "./config/apiConfig";
 
@@ -77,7 +79,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    if (isAuthenticated && (currentView === "library" || currentView === "designer")) {
+    if (isAuthenticated && (currentView === "library" || currentView === "designer" || currentView === "history" || currentView === "admin")) {
       fetchLabels();
     }
   }, [isAuthenticated, currentView]);
@@ -113,7 +115,8 @@ const App = () => {
         category: "custom",
         dimensions: labelData.labelSize || { width: 100, height: 80, unit: "mm" },
         elements: labelData.elements || [],
-        isPublic: true
+        isPublic: true,
+        status: "draft"
       };
 
       const response = await apiCall(API_ENDPOINTS.TEMPLATES, {
@@ -139,6 +142,25 @@ const App = () => {
     }
   };
 
+  const handleUpdateStatus = async (labelId, status) => {
+    try {
+      const response = await apiCall(API_ENDPOINTS.TEMPLATE_BY_ID(labelId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (response.success) {
+        setLabels(labels.map(l => l.id === labelId ? { ...l, status } : l));
+        if (currentLabel && (currentLabel.id === labelId || currentLabel._id === labelId)) {
+          setCurrentLabel({ ...currentLabel, status });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
+
   const handleEditLabel = (label) => {
     setCurrentLabel(label);
     setCurrentView("designer");
@@ -158,7 +180,8 @@ const App = () => {
       const payload = {
         elements: labelData.elements,
         dimensions: labelData.labelSize,
-        name: currentLabel.name
+        name: currentLabel.name,
+        status: labelData.status || currentLabel.status
       };
 
       const response = await apiCall(API_ENDPOINTS.TEMPLATE_BY_ID(currentLabel.id || currentLabel._id), {
@@ -197,7 +220,7 @@ const App = () => {
       className="min-h-screen transition-colors duration-300 flex flex-col bg-[var(--color-bg-main)] text-[var(--color-text-main)]"
     >
       {/* Navigation / Header - Only show for main app functionality */}
-      {(isAuthenticated || currentView === "designer" || currentView === "library") && !isLoading && (
+      {(isAuthenticated || ["designer", "library", "history", "admin"].includes(currentView)) && !isLoading && (
         <AppHeader onNavigate={navigateTo} currentView={currentView} />
       )}
 
@@ -229,7 +252,19 @@ const App = () => {
                 onCreateLabel={handleCreateLabel}
                 onEditLabel={handleEditLabel}
                 onDeleteLabel={handleDeleteLabel}
+                onUpdateStatus={handleUpdateStatus}
+                onNavigate={navigateTo}
               />
+            )}
+
+            {/* History View */}
+            {(currentView === "history") && (
+              <PrintHistory labels={labels} />
+            )}
+
+            {/* Admin View */}
+            {(currentView === "admin") && (
+              <AdminDashboard />
             )}
 
             {(currentView === "designer") && (

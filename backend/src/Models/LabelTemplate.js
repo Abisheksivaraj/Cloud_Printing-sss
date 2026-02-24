@@ -61,6 +61,11 @@ const labelTemplateSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    status: {
+        type: String,
+        enum: ["draft", "published", "archived"],
+        default: "draft",
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "admin",

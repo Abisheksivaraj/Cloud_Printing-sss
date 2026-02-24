@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowLeft, Save, Minus, X, Grid, ZoomIn, ZoomOut, RefreshCw, Search, Plus, Trash2, LayoutGrid } from "lucide-react";
+import { ArrowLeft, Save, Minus, X, Grid, ZoomIn, ZoomOut, RefreshCw, Search, Plus, Trash2, LayoutGrid, Check } from "lucide-react";
 
 import DesignCanvas from "./DesignCanvas";
 import ToolsPalette from "./designer/ToolsPalette";
@@ -90,8 +90,8 @@ const LabelDesigner = ({ label, labels = [], onSave, onSelectLabel, onCreateLabe
   };
 
   // ─── Save ───────────────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (onSave) await onSave({ elements, labelSize });
+  const handleSave = async (status = null) => {
+    if (onSave) await onSave({ elements, labelSize, status: status || label?.status });
     // Navigation to library is handled by App.jsx's handleSaveLabel after successful API call
   };
 
@@ -494,13 +494,34 @@ const LabelDesigner = ({ label, labels = [], onSave, onSelectLabel, onCreateLabe
 
             {/* Save group */}
             <div className="flex items-center gap-1 bg-[var(--color-bg-main)] p-1 rounded-xl border border-[var(--color-border)]">
-              <button
-                onClick={handleSave}
-                className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
-              >
-                <Save size={14} />
-                Save
-              </button>
+              {label?.status === 'draft' ? (
+                <>
+                  <button
+                    onClick={() => handleSave('draft')}
+                    className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                    title="Save but keep as draft"
+                  >
+                    <Save size={14} />
+                    Draft
+                  </button>
+                  <button
+                    onClick={() => handleSave('published')}
+                    className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                    title="Save and publish for printing"
+                  >
+                    <Check size={14} />
+                    Publish
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => handleSave()}
+                  className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                >
+                  <Save size={14} />
+                  Save
+                </button>
+              )}
               <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1"></div>
               <button
                 onClick={() => { if (onNavigateToLibrary) onNavigateToLibrary(); }}

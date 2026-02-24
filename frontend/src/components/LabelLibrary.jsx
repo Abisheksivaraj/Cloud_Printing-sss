@@ -11,7 +11,9 @@ import {
   Package,
   Clock,
   LayoutGrid,
-  Filter
+  Filter,
+  Archive,
+  ArchiveRestore
 } from "lucide-react";
 import CreateLabelModal from "../components/Models/CreateLabelModal";
 import ImportDataModal from "../components/Models/ImportDataModal";
@@ -26,6 +28,8 @@ const LabelLibrary = ({
   onCreateLabel,
   onEditLabel,
   onDeleteLabel,
+  onUpdateStatus,
+  onNavigate,
 }) => {
   const { t } = useLanguage();
   const { theme, isDarkMode } = useTheme();
@@ -120,7 +124,15 @@ const LabelLibrary = ({
           {[
             { label: "Total Labels", value: labels.length, icon: Package, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/20" },
             { label: "Active", value: labels.filter((l) => l.elements?.length > 0).length, icon: FileText, color: "text-green-500", bg: "bg-green-50 dark:bg-green-900/20" },
-            { label: "Barcodes", value: labels.filter((l) => l.elements?.some((e) => e.type === "barcode")).length, icon: "📊", color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-900/20" },
+            {
+              label: "Print History",
+              value: "Logs",
+              icon: Clock,
+              color: "text-purple-500",
+              bg: "bg-purple-50 dark:bg-purple-900/20",
+              onClick: () => onNavigate("history"),
+              clickable: true
+            },
             {
               label: "Recent", value: labels.filter((l) => {
                 // Pseudo-logic for recent, assuming we track last modified eventually
@@ -130,17 +142,19 @@ const LabelLibrary = ({
           ].map((stat, i) => (
             <div
               key={i}
-              className="p-5 rounded-2xl border transition-all hover:shadow-md"
+              onClick={stat.onClick}
+              className={`p-5 rounded-2xl border transition-all ${stat.clickable ? 'cursor-pointer hover:shadow-xl hover:scale-[1.02] active:scale-95 group' : 'hover:shadow-md'}`}
               style={{
                 backgroundColor: theme.surface,
                 borderColor: theme.border,
               }}
             >
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center transform transition-transform ${stat.clickable ? 'group-hover:rotate-12' : ''}`}>
                   {typeof stat.icon === 'string' ? <span className="text-xl">{stat.icon}</span> : <stat.icon size={24} />}
                 </div>
                 {i === 0 && <div className="text-xs font-bold px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500">All Time</div>}
+                {stat.clickable && <div className="text-[10px] font-black uppercase text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity">View →</div>}
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wider mb-1" style={{ color: theme.textMuted }}>{stat.label}</p>
@@ -197,7 +211,8 @@ const LabelLibrary = ({
               {filteredLabels.map((label) => (
                 <div
                   key={label.id}
-                  className="group rounded-2xl overflow-hidden border transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1"
+                  className={`group rounded-2xl overflow-hidden border transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 ${label.status === 'archived' ? 'opacity-60 grayscale' : ''
+                    }`}
                   style={{
                     backgroundColor: theme.surface,
                     borderColor: theme.border,
@@ -213,6 +228,12 @@ const LabelLibrary = ({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500">
                             {label.labelSize?.width || 100} × {label.labelSize?.height || 80}mm
+                          </span>
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${label.status === 'published' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                            label.status === 'archived' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                              'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                            }`}>
+                            {label.status || 'draft'}
                           </span>
                         </div>
                       </div>
@@ -260,15 +281,17 @@ const LabelLibrary = ({
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleImportData(label)}
-                        className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Import Data"
+                        disabled={label.status === 'archived'}
+                        className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={label.status === 'archived' ? "Archived - Cannot Import" : "Import Data"}
                       >
                         <Upload size={18} />
                       </button>
                       <button
                         onClick={() => handlePrint(label)}
-                        className="p-2 text-gray-500 hover:text-[var(--color-secondary)] hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
-                        title="Print"
+                        disabled={label.status === 'archived'}
+                        className="p-2 text-gray-500 hover:text-[var(--color-secondary)] hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={label.status === 'archived' ? "Archived - Cannot Print" : "Print"}
                       >
                         <Printer size={18} />
                       </button>
@@ -281,6 +304,13 @@ const LabelLibrary = ({
                         title="Edit"
                       >
                         <Edit2 size={18} />
+                      </button>
+                      <button
+                        onClick={() => onUpdateStatus(label.id, label.status === 'archived' ? 'published' : 'archived')}
+                        className="p-2 text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                        title={label.status === 'archived' ? "Restore Template" : "Archive Template"}
+                      >
+                        {label.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
                       </button>
                       <button
                         onClick={() => {

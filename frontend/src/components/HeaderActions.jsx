@@ -2,7 +2,7 @@ import { Tag, Sun, Moon, LogOut } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
 
-export const AppHeader = ({ onNavigate }) => {
+export const AppHeader = ({ onNavigate, currentView }) => {
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const { t } = useLanguage();
 
@@ -18,23 +18,43 @@ export const AppHeader = ({ onNavigate }) => {
         <div className="flex items-center justify-between h-12 md:h-14">
 
           {/* Left: Brand */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
             <div
               className="flex items-center gap-3 cursor-pointer group select-none"
-              onClick={() => onNavigate("designer")}
+              onClick={() => onNavigate("library")}
             >
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-hover)] rounded-xl shadow-lg shadow-secondary/20 flex items-center justify-center transform group-hover:rotate-6 transition-transform duration-300">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-hover)] rounded-xl shadow-lg shadow-secondary/20 flex items-center justify-center transform group-hover:rotate-6 transition-transform duration-300 shrink-0">
                 <Tag className="text-white" size={16} />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-sm md:text-base font-black tracking-tight leading-none" style={{ color: theme.text }}>
+              <div className="hidden xs:block">
+                <h1 className="text-base font-black tracking-tight leading-none flex items-center gap-2" style={{ color: theme.text }}>
                   Perfect Labeler
+                  <span className="px-2 py-1 rounded-md bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-sm">
+                    Pro Edition
+                  </span>
                 </h1>
-                <span className="text-[9px] font-bold text-[var(--color-primary)] uppercase tracking-[0.2em]">
-                  Pro Edition
-                </span>
               </div>
             </div>
+
+            <nav className="flex items-center gap-0.5 sm:gap-1">
+              {[
+                { id: "library", label: "Library", short: "L" },
+                { id: "history", label: "History", short: "H" },
+                { id: "admin", label: "Admin", short: "A" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id)}
+                  className={`px-3 sm:px-4 py-1.5 text-[10px] md:text-[11px] font-black uppercase tracking-widest rounded-lg transition-all 
+                    ${currentView === item.id
+                      ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-primary/20'
+                      : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <span className="hidden sm:inline">{item.label}</span>
+                  <span className="sm:hidden">{item.short}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
           {/* Right: Actions */}

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Printer, Settings, Maximize2, Minimize2, Check } from "lucide-react";
 import BarcodeElement from "../designer/code";
 import { useTheme } from "../../ThemeContext";
+import { printService, authService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
 
 const MM_TO_PX = 3.7795275591;
 
@@ -238,8 +239,58 @@ const PrintPreviewModal = ({ label, onClose }) => {
     1,
   );
 
-  const handlePrint = () => {
-    setTimeout(() => window.print(), 300);
+  const handlePrint = async () => {
+    try {
+      // Get current printer info or default
+      let printerName = "System Default";
+      try {
+        const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
+        if (printersData.printers?.length > 0) {
+          const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
+          printerName = defaultPrinter.name;
+        }
+      } catch (e) {
+        console.warn("Could not fetch printer info, using default", e);
+      }
+
+      // Calculate print metrics
+      const printedLengthMm = (sheetHeight / MM_TO_PX).toFixed(1);
+
+      // Create print job record
+      const jobData = {
+        printerName,
+        documentName: label.name || "Unnamed Label",
+        templateId: label._id || label.id,
+        documentType: "label",
+        copies: cols * rows,
+        priority: "normal",
+        status: "pending",
+        totalRecords: 1,
+        printedRecords: 1,
+        printedLength: parseFloat(printedLengthMm),
+        metadata: {
+          labelWidth: labelSize.width,
+          labelHeight: labelSize.height,
+          cols,
+          rows
+        }
+      };
+
+      const { job } = await printService.createJob(jobData);
+
+      // Trigger browser print
+      window.print();
+
+      // Update status to completed after a delay (since we can't truly know when browser print finishes)
+      setTimeout(() => {
+        printService.updateStatus(job._id, "completed");
+      }, 2000);
+
+    } catch (error) {
+      console.error("Print tracking failed:", error);
+      // Still show print dialog even if tracking fails
+      window.print();
+    }
   };
 
   return (

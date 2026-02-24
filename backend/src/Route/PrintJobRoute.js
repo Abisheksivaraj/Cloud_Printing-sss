@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const PrintJob = require("../Models/PrintJob");
 const { authenticateToken, isAdmin } = require("../middleware/auth");
 
@@ -90,6 +91,11 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
             priority,
             printSettings,
             fileSize,
+            totalRecords,
+            printedRecords,
+            printedLength,
+            metadata,
+            sourceData,
         } = req.body;
 
         if (!printerName || !documentName) {
@@ -102,13 +108,18 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
         const newJob = new PrintJob({
             userId: req.user.id,
             printerName,
-            templateId: templateId || null,
+            templateId: (templateId && mongoose.Types.ObjectId.isValid(templateId)) ? templateId : null,
             documentName,
             documentType: documentType || "label",
             copies: copies || 1,
             priority: priority || "normal",
             printSettings: printSettings || {},
             fileSize: fileSize || 0,
+            totalRecords: totalRecords || 0,
+            printedRecords: printedRecords || 0,
+            printedLength: printedLength || 0,
+            metadata: metadata || {},
+            sourceData: sourceData || [],
             status: "pending",
         });
 
@@ -120,10 +131,12 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
             job: newJob,
         });
     } catch (error) {
-        console.error("Error creating print job:", error);
+        console.error("Error creating print job. Request Body:", req.body);
+        console.error("User ID from request:", req.user?.id);
+        console.error("Detailed error:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to create print job",
+            message: `Failed to create print job: ${error.message}`,
             error: error.message,
         });
     }

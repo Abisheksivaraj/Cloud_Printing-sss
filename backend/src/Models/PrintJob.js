@@ -8,7 +8,7 @@ const printJobSchema = new mongoose.Schema({
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "admin",
         required: true,
     },
     printerName: {
@@ -53,6 +53,26 @@ const printJobSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    totalRecords: {
+        type: Number,
+        default: 0,
+    },
+    printedRecords: {
+        type: Number,
+        default: 0,
+    },
+    printedLength: {
+        type: Number, // in mm
+        default: 0,
+    },
+    metadata: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
+    },
+    sourceData: {
+        type: Array, // Stores the imported rows and mapping for re-printing
+        default: [],
+    },
     errorMessage: {
         type: String,
         default: null,
@@ -71,10 +91,11 @@ const printJobSchema = new mongoose.Schema({
     },
 });
 
-// Generate unique job ID before saving
-printJobSchema.pre("save", function (next) {
+// Generate unique 5-digit job ID before validation
+printJobSchema.pre("validate", function (next) {
     if (!this.jobId) {
-        this.jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const randomDigits = Math.floor(10000 + Math.random() * 90000);
+        this.jobId = `JOB-${randomDigits}`;
     }
     next();
 });
