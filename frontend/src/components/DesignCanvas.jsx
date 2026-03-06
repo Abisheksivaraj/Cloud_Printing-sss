@@ -1515,7 +1515,7 @@ const DesignCanvas = forwardRef(
           pointerEvents:
             isDrawingLine || isDrawingBarcode || isDrawingShape
               ? "none"
-              : "auto",
+              : element.pointerEvents || "auto",
           padding: element.type === "text" ? "0 4px" : "0",
           boxSizing: "border-box",
         };

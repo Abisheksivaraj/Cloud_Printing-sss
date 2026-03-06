@@ -5,18 +5,21 @@ const API_BASE_URL =
 
 
 // const API_BASE_URL =
-//   import.meta.env.VITE_API_URL
-// "http://localhost:8081";
+//   import.meta.env.VITE_API_URL || "http://localhost:8081";
 
 export const API_ENDPOINTS = {
   // Authentication
   REGISTER: `${API_BASE_URL}/register`,
   LOGIN: `${API_BASE_URL}/login`,
+  LOGOUT: `${API_BASE_URL}/api/logout`,
+  FORGOT_PASSWORD: `${API_BASE_URL}/forgot-password`,
+  SYSTEM_STATUS: `${API_BASE_URL}/system/status`,
 
   // Users
   USERS: `${API_BASE_URL}/api/users`,
   USER_BY_ID: (id) => `${API_BASE_URL}/api/users/${id}`,
-  USER_INVITE: `${API_BASE_URL}/api/users/invite`,
+  USER_CREATE: `${API_BASE_URL}/api/users/invite`, // This reflects the direct creation logic now
+  USER_INVITE: `${API_BASE_URL}/api/users/invite`, // Keep for backward compatibility if used elsewhere
   USER_ACCEPT_INVITE: `${API_BASE_URL}/api/users/accept-invite`,
   USER_LOGIN_UPDATE: (id) => `${API_BASE_URL}/api/users/${id}/login`,
 
@@ -28,6 +31,8 @@ export const API_ENDPOINTS = {
     `${API_BASE_URL}/api/printer/${encodeURIComponent(name)}/status`,
   PRINTER_PROPERTIES: `${API_BASE_URL}/api/printer/properties`,
   PRINTER_PREFERENCES: `${API_BASE_URL}/api/printer/preferences`,
+  PRINTER_STATUS: (name) =>
+    `${API_BASE_URL}/api/printer/${encodeURIComponent(name)}/status`,
   PRINTER_SETTINGS: `${API_BASE_URL}/api/open-printer-settings`,
 
   // Templates
@@ -84,7 +89,9 @@ export const apiCall = async (url, options = {}) => {
     }
 
     if (!response.ok) {
-      throw new Error(data.message || "API request failed");
+      const error = new Error(data.message || "API request failed");
+      Object.assign(error, data);
+      throw error;
     }
 
     return data;
@@ -96,28 +103,42 @@ export const apiCall = async (url, options = {}) => {
 
 // Authentication helpers
 export const authService = {
-  login: async (userName, password) => {
+  login: async (email, password, forceLogin = false) => {
     const data = await apiCall(API_ENDPOINTS.LOGIN, {
       method: "POST",
-      body: JSON.stringify({ userName, password }),
+      body: JSON.stringify({ email, password, forceLogin }),
     });
 
     if (data.token) {
       localStorage.setItem("authToken", data.token);
-      localStorage.setItem("user", JSON.stringify(data.admin || data.user));
+      localStorage.setItem("user", JSON.stringify(data.user));
     }
 
     return data;
   },
 
-  register: async (userName, password) => {
+  register: async (registrationData) => {
     return await apiCall(API_ENDPOINTS.REGISTER, {
       method: "POST",
-      body: JSON.stringify({ userName, password }),
+      body: JSON.stringify(registrationData),
     });
   },
 
-  logout: () => {
+  forgotPassword: async (email) => {
+    return await apiCall(API_ENDPOINTS.FORGOT_PASSWORD, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  logout: async () => {
+    try {
+      if (localStorage.getItem("authToken")) {
+        await apiCall(API_ENDPOINTS.LOGOUT, { method: "POST" });
+      }
+    } catch (err) {
+      console.error("Backend logout failed", err);
+    }
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
   },
@@ -129,6 +150,15 @@ export const authService = {
   getUser: () => {
     const user = localStorage.getItem("user");
     return user ? JSON.parse(user) : null;
+  },
+
+  checkSystemStatus: async () => {
+    try {
+      return await apiCall(API_ENDPOINTS.SYSTEM_STATUS);
+    } catch (error) {
+      console.error("Failed to check system status", error);
+      return { success: false, superAdminExists: false };
+    }
   },
 };
 
@@ -150,11 +180,20 @@ export const printService = {
     });
   },
 
-  updateStatus: async (id, status, errorMessage = null) => {
+  updateStatus: async (id, status, errorMessage = null, errorLog = null, errorDetails = null) => {
     const url = API_ENDPOINTS.PRINT_JOB_STATUS(id);
+    const body = { status, errorMessage };
+    if (errorLog) body.errorLog = errorLog;
+    if (errorDetails) body.errorDetails = errorDetails;
     return await apiCall(url, {
       method: "PUT",
-      body: JSON.stringify({ status, errorMessage }),
+      body: JSON.stringify(body),
+    });
+  },
+
+  deleteJob: async (id) => {
+    return await apiCall(API_ENDPOINTS.PRINT_JOB_BY_ID(id), {
+      method: "DELETE",
     });
   },
 

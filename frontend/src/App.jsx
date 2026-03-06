@@ -19,6 +19,7 @@ const App = () => {
   const [currentLabel, setCurrentLabel] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(authService.getUser());
 
   useEffect(() => {
     // Check for active session on mount
@@ -31,12 +32,17 @@ const App = () => {
       if (isCompleteProfile) {
         setCurrentView("signup");
         setIsAuthenticated(isAuth);
+        setUser(authService.getUser());
       } else if (isAuth) {
         setIsAuthenticated(true);
-        setCurrentView("library");
+        const savedView = localStorage.getItem("currentView") || "library";
+        const isValidView = ["library", "designer", "history", "admin"].includes(savedView);
+        setCurrentView(isValidView ? savedView : "library");
+        setUser(authService.getUser());
       } else {
         setIsAuthenticated(false);
         setCurrentView("login"); // Default to login for new visitors
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -47,11 +53,25 @@ const App = () => {
       authService.logout();
       setIsAuthenticated(false);
       setCurrentView("login");
+      setUser(null);
     };
 
     window.addEventListener('auth-error', handleAuthError);
     return () => window.removeEventListener('auth-error', handleAuthError);
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && ["library", "designer", "history", "admin"].includes(currentView)) {
+      // Role-based view protection
+      const userRole = user?.role?.toLowerCase();
+      const isAdmin = userRole === "admin" || userRole === "superadmin";
+      if (currentView === "admin" && !isAdmin && userRole !== undefined && userRole !== null) {
+        setCurrentView("library");
+        return;
+      }
+      localStorage.setItem("currentView", currentView);
+    }
+  }, [currentView, isAuthenticated, user]);
 
   // Fetch labels from backend
   const fetchLabels = async () => {
@@ -90,21 +110,25 @@ const App = () => {
       authService.logout();
       setIsAuthenticated(false);
       setCurrentView("login");
+      localStorage.removeItem("currentView");
+      setUser(null);
       return;
     }
     setCurrentView(view);
   };
 
-  const handleSignup = (user) => {
-    console.log("Signup successful:", user);
+  const handleSignup = (userData) => {
+    console.log("Signup successful:", userData);
     setIsAuthenticated(true);
-    setCurrentView("designer");
+    setCurrentView("admin");
+    setUser(authService.getUser());
   };
 
-  const handleLogin = (user) => {
-    console.log("Login successful:", user);
+  const handleLogin = (userData) => {
+    console.log("Login successful:", userData);
     setIsAuthenticated(true);
     setCurrentView("library");
+    setUser(authService.getUser());
   };
 
   const handleCreateLabel = async (labelData) => {
@@ -178,9 +202,9 @@ const App = () => {
   const handleSaveLabel = async (labelData) => {
     try {
       const payload = {
+        name: labelData.name || currentLabel.name,
         elements: labelData.elements,
         dimensions: labelData.labelSize,
-        name: currentLabel.name,
         status: labelData.status || currentLabel.status
       };
 
@@ -221,7 +245,7 @@ const App = () => {
     >
       {/* Navigation / Header - Only show for main app functionality */}
       {(isAuthenticated || ["designer", "library", "history", "admin"].includes(currentView)) && !isLoading && (
-        <AppHeader onNavigate={navigateTo} currentView={currentView} />
+        <AppHeader onNavigate={navigateTo} currentView={currentView} user={user} />
       )}
 
       <main className="flex-1">
@@ -249,6 +273,7 @@ const App = () => {
             {(currentView === "library") && (
               <LabelLibrary
                 labels={labels}
+                user={user}
                 onCreateLabel={handleCreateLabel}
                 onEditLabel={handleEditLabel}
                 onDeleteLabel={handleDeleteLabel}
@@ -259,7 +284,7 @@ const App = () => {
 
             {/* History View */}
             {(currentView === "history") && (
-              <PrintHistory labels={labels} />
+              <PrintHistory labels={labels} user={user} />
             )}
 
             {/* Admin View */}
@@ -271,6 +296,7 @@ const App = () => {
               <LabelDesigner
                 label={currentLabel}
                 labels={labels}
+                user={user}
                 onSave={handleSaveLabel}
                 onSelectLabel={handleEditLabel}
                 onCreateLabel={handleCreateLabel}

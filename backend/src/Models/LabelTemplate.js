@@ -68,7 +68,7 @@ const labelTemplateSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "admin",
+        ref: "User",
         required: true,
     },
     usageCount: {

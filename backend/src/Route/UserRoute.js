@@ -116,15 +116,15 @@ router.post("/api/users", authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
-// Invite user (Admin only)
+// Create/Invite user (Admin only)
 router.post("/api/users/invite", authenticateToken, isAdmin, async (req, res) => {
     try {
-        const { email, companyName } = req.body;
+        const { email, firstName, lastName, mobileNumber, role, companyName } = req.body;
 
-        if (!email || !companyName) {
+        if (!email || !firstName || !lastName || !companyName) {
             return res.status(400).json({
                 success: false,
-                message: "Email and company name are required",
+                message: "Email, First Name, Last Name and Company Name are required",
             });
         }
 
@@ -137,38 +137,40 @@ router.post("/api/users/invite", authenticateToken, isAdmin, async (req, res) =>
             });
         }
 
-        // Generate invite token
-        const inviteToken = crypto.randomBytes(32).toString("hex");
-        const inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-        // Create user with invite token
+        // Create user directly
         const newUser = new User({
-            email,
+            email: email.toLowerCase(),
+            firstName,
+            lastName,
+            userName: `${firstName}_${lastName}_${Math.floor(Math.random() * 1000)}`.toLowerCase(),
             companyName,
-            userName: email.split("@")[0], // Temporary username
-            password: await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 10), // Temporary password
+            mobileNumber,
+            role: role || "user",
             invitedBy: req.user.id,
-            inviteToken,
-            inviteExpires,
-            isActive: false,
+            isActive: true,
+            needsPasswordSet: true, // Flag for first-time login
+            password: null, // No password yet
         });
 
         await newUser.save();
 
-        // In production, send email with invite link
-        const inviteLink = `${process.env.FRONTEND_URL}/signup?token=${inviteToken}&email=${email}`;
-
         res.status(201).json({
             success: true,
-            message: "Invitation sent successfully",
-            inviteLink, // Remove this in production
-            inviteToken,
+            message: "User created successfully",
+            user: {
+                id: newUser._id,
+                email: newUser.email,
+                firstName: newUser.firstName,
+                lastName: newUser.lastName,
+                role: newUser.role,
+                companyName: newUser.companyName
+            }
         });
     } catch (error) {
-        console.error("Error inviting user:", error);
+        console.error("Error creating user:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to send invitation",
+            message: "Failed to create user",
             error: error.message,
         });
     }
@@ -227,8 +229,8 @@ router.put("/api/users/:id", authenticateToken, async (req, res) => {
     try {
         const { userName, email, companyName, isActive } = req.body;
 
-        // Check if user can update (self or admin)
-        if (req.user.id !== req.params.id && req.user.role !== "admin") {
+        // Check if user can update (self or admin/superadmin)
+        if (req.user.id !== req.params.id && !["admin", "superadmin"].includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
                 message: "You don't have permission to update this user",
@@ -239,7 +241,7 @@ router.put("/api/users/:id", authenticateToken, async (req, res) => {
         if (userName) updateData.userName = userName;
         if (email) updateData.email = email;
         if (companyName) updateData.companyName = companyName;
-        if (typeof isActive !== "undefined" && req.user.role === "admin") {
+        if (typeof isActive !== "undefined" && ["admin", "superadmin"].includes(req.user.role)) {
             updateData.isActive = isActive;
         }
 

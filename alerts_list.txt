@@ -1,0 +1,16 @@
+frontend/src/components/LabelDesign.jsx:100:      const newName = window.prompt("Enter a name for this label:", defaultName);
+frontend/src/components/LabelLibrary.jsx:68:      const confirmDraft = window.confirm(
+frontend/src/components/LabelLibrary.jsx:345:                          if (window.confirm(`Delete "${label.name}"?`)) {
+frontend/src/components/LabelLibrary.jsx:406:          const customName = window.prompt("Enter a name for this design:", defaultName);
+frontend/src/components/Models/GeneratedLabelsPreview.jsx:396:        alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
+frontend/src/components/Models/GeneratedLabelsPreview.jsx:494:      alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
+frontend/src/components/Models/ImportDataModal.jsx:160:      alert("Please select a CSV or Excel file (.xlsx, .xls)");
+frontend/src/components/Models/ImportDataModal.jsx:226:      alert("Error reading file. Please try again.");
+frontend/src/components/Models/ImportDataModal.jsx:274:        alert(
+frontend/src/components/Models/ImportDataModal.jsx:370:      alert("No data available");
+frontend/src/components/Models/PrintPreviewModal.jsx:321:        alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
+frontend/src/components/Models/PrintPreviewModal.jsx:418:      alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
+frontend/src/components/PrintHistory.jsx:63:            alert("Failed to delete print job. " + (error.message || ""));
+frontend/src/components/PrintHistory.jsx:188:            alert("The original template for this job could not be found.");
+frontend/src/components/PrintHistory.jsx:199:            alert("No source data found for this job. Please use 'Edit & Print' instead.");
+frontend/src/components/PrintHistory.jsx:258:            alert("The original template for this job could not be found.");

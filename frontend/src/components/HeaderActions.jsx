@@ -1,8 +1,8 @@
-import { Tag, Sun, Moon, LogOut } from "lucide-react";
+import { Tag, Sun, Moon, LogOut, ArrowLeft } from "lucide-react";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "../LanguageContext";
 
-export const AppHeader = ({ onNavigate, currentView }) => {
+export const AppHeader = ({ onNavigate, currentView, user }) => {
   const { isDarkMode, toggleTheme, theme } = useTheme();
   const { t } = useLanguage();
 
@@ -18,43 +18,64 @@ export const AppHeader = ({ onNavigate, currentView }) => {
         <div className="flex items-center justify-between h-12 md:h-14">
 
           {/* Left: Brand */}
-          <div className="flex items-center gap-4 sm:gap-8">
-            <div
-              className="flex items-center gap-3 cursor-pointer group select-none"
-              onClick={() => onNavigate("library")}
-            >
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-hover)] rounded-xl shadow-lg shadow-secondary/20 flex items-center justify-center transform group-hover:rotate-6 transition-transform duration-300 shrink-0">
-                <Tag className="text-white" size={16} />
-              </div>
-              <div className="hidden xs:block">
-                <h1 className="text-base font-black tracking-tight leading-none flex items-center gap-2" style={{ color: theme.text }}>
-                  Perfect Labeler
-                  <span className="px-2 py-1 rounded-md bg-[var(--color-primary)] text-white text-[9px] font-black uppercase tracking-widest shadow-sm">
-                    Pro Edition
-                  </span>
-                </h1>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3">
+              {!["library", "admin", "history"].includes(currentView) && (
+                <button
+                  onClick={() => onNavigate("library")}
+                  className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all active:scale-95 group/back"
+                  style={{ color: theme.text }}
+                  title="Back to Library"
+                >
+                  <ArrowLeft size={20} className="group-hover/back:-translate-x-0.5 transition-transform" />
+                </button>
+              )}
+
+              <div
+                className="flex items-center gap-3 cursor-pointer group select-none"
+                onClick={() => onNavigate("library")}
+              >
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-hover)] rounded-xl shadow-lg shadow-secondary/20 flex items-center justify-center transform group-hover:rotate-6 transition-transform duration-300 shrink-0">
+                  <Tag className="text-white" size={16} />
+                </div>
+                <div className="flex">
+                  <h1 className="flex flex-col items-start leading-tight" style={{ color: theme.text }}>
+                    <span className="text-base font-black tracking-tight">ATPL's Perfect Labeler</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
+                      Pro Edition
+                    </span>
+                  </h1>
+                </div>
               </div>
             </div>
 
-            <nav className="flex items-center gap-0.5 sm:gap-1">
-              {[
-                { id: "library", label: "Library", short: "L" },
-                { id: "history", label: "History", short: "H" },
-                { id: "admin", label: "Admin", short: "A" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id)}
-                  className={`px-3 sm:px-4 py-1.5 text-[10px] md:text-[11px] font-black uppercase tracking-widest rounded-lg transition-all 
-                    ${currentView === item.id
-                      ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-primary/20'
-                      : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                >
-                  <span className="hidden sm:inline">{item.label}</span>
-                  <span className="sm:hidden">{item.short}</span>
-                </button>
-              ))}
-            </nav>
+            {["library", "admin", "history"].includes(currentView) && (
+              <nav className="flex items-center gap-0.5 sm:gap-1">
+                {[
+                  { id: "library", label: "Library", short: "L" },
+                  { id: "history", label: "History", short: "H" },
+                  { id: "admin", label: "Admin", short: "A", adminOnly: true },
+                ].filter(item => {
+                  if (item.adminOnly) {
+                    const role = user?.role?.toLowerCase();
+                    return role === "admin" || role === "superadmin" || !user?.role;
+                  }
+                  return true;
+                }).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className={`px-3 sm:px-4 py-1.5 text-[10px] md:text-[11px] font-black uppercase tracking-widest rounded-lg transition-all 
+                      ${currentView === item.id
+                        ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-primary/20'
+                        : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                  >
+                    <span className="hidden sm:inline">{item.label}</span>
+                    <span className="sm:hidden">{item.short}</span>
+                  </button>
+                ))}
+              </nav>
+            )}
           </div>
 
           {/* Right: Actions */}
@@ -67,6 +88,24 @@ export const AppHeader = ({ onNavigate, currentView }) => {
             >
               {isDarkMode ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-slate-600" />}
             </button>
+
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
+
+            {user && (
+              <div className="flex items-center gap-3 px-2">
+                <div className="flex flex-col items-end">
+                  <span className="text-[11px] font-black tracking-tight" style={{ color: theme.text }}>
+                    {user.firstName || user.userName || "User"} {user.lastName || ""}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--color-primary)]">
+                    {user.role || "Admin"}
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 text-[var(--color-primary)] font-black text-[10px]">
+                  {(user.firstName?.[0] || user.userName?.[0] || "U").toUpperCase()}
+                </div>
+              </div>
+            )}
 
             <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1"></div>
 

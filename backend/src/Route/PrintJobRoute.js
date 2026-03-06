@@ -96,6 +96,10 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
             printedLength,
             metadata,
             sourceData,
+            status,
+            errorMessage,
+            errorLog,
+            errorDetails,
         } = req.body;
 
         if (!printerName || !documentName) {
@@ -120,8 +124,16 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
             printedLength: printedLength || 0,
             metadata: metadata || {},
             sourceData: sourceData || [],
-            status: "pending",
+            status: status || "pending",
+            errorMessage: errorMessage || null,
+            errorLog: errorLog || [],
+            errorDetails: errorDetails || {},
         });
+
+        // If created as failed, set completedAt
+        if (status === "failed") {
+            newJob.completedAt = Date.now();
+        }
 
         await newJob.save();
 
@@ -145,7 +157,7 @@ router.post("/api/print-jobs", authenticateToken, async (req, res) => {
 // Update print job status
 router.put("/api/print-jobs/:id/status", authenticateToken, async (req, res) => {
     try {
-        const { status, errorMessage } = req.body;
+        const { status, errorMessage, errorLog, errorDetails, printedRecords } = req.body;
 
         if (!status) {
             return res.status(400).json({
@@ -164,11 +176,35 @@ router.put("/api/print-jobs/:id/status", authenticateToken, async (req, res) => 
             updateData.completedAt = Date.now();
         }
 
+        if (printedRecords !== undefined) {
+            updateData.printedRecords = printedRecords;
+        }
+
         if (errorMessage) {
             updateData.errorMessage = errorMessage;
         }
 
-        const job = await PrintJob.findByIdAndUpdate(req.params.id, updateData, {
+        if (errorDetails) {
+            updateData.errorDetails = errorDetails;
+        }
+
+        // Build the update query
+        const updateQuery = { $set: updateData };
+
+        // Append to errorLog array if new entries are provided
+        if (errorLog && errorLog.length > 0) {
+            updateQuery.$push = { errorLog: { $each: errorLog } };
+        }
+
+        // If completed and no printedRecords specified, set to totalRecords
+        if (status === "completed" && printedRecords === undefined) {
+            const existingJob = await PrintJob.findById(req.params.id);
+            if (existingJob) {
+                updateQuery.$set.printedRecords = existingJob.totalRecords;
+            }
+        }
+
+        const job = await PrintJob.findByIdAndUpdate(req.params.id, updateQuery, {
             new: true,
         });
 
@@ -244,10 +280,10 @@ router.post("/api/print-jobs/:id/cancel", authenticateToken, async (req, res) =>
     }
 });
 
-// Delete print job (Admin only)
-router.delete("/api/print-jobs/:id", authenticateToken, isAdmin, async (req, res) => {
+// Delete print job (any authenticated user can delete their own, admin can delete any)
+router.delete("/api/print-jobs/:id", authenticateToken, async (req, res) => {
     try {
-        const job = await PrintJob.findByIdAndDelete(req.params.id);
+        const job = await PrintJob.findById(req.params.id);
 
         if (!job) {
             return res.status(404).json({
@@ -255,6 +291,20 @@ router.delete("/api/print-jobs/:id", authenticateToken, isAdmin, async (req, res
                 message: "Print job not found",
             });
         }
+
+        // Check if user has permission to delete this job
+        if (
+            req.user.role !== "admin" &&
+            req.user.role !== "superadmin" &&
+            job.userId.toString() !== req.user.id
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: "You don't have permission to delete this job",
+            });
+        }
+
+        await PrintJob.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
             success: true,

@@ -63,7 +63,7 @@ export const BarcodeElement = ({ element }) => {
               displayValue: true,
               fontSize: fontSize,
               margin: 0,
-              background: "transparent",
+              background: null, // explicit transparency
               lineColor: "#000000",
             });
             return true;
@@ -122,6 +122,7 @@ export const BarcodeElement = ({ element }) => {
           includetext: false,
           paddingwidth: 0,
           paddingheight: 0,
+          backgroundcolor: "ffffff00", // Transparent background (RRGGBBAA)
         });
 
         // Scale canvas to fit container
@@ -158,6 +159,8 @@ export const BarcodeElement = ({ element }) => {
           value={combinedValue}
           size={qrSize}
           style={{ maxWidth: "100%", maxHeight: "100%" }}
+          includeMargin={false}
+          bgColor="transparent"
         />
       </div>
     );

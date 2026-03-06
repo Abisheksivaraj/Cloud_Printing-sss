@@ -45,7 +45,7 @@ const assetSchema = new mongoose.Schema({
     },
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "admin",
+        ref: "User",
         required: true,
     },
     movementHistory: [

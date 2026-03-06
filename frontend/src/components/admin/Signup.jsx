@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, Lock, ArrowRight, UserPlus, Loader2 } from "lucide-react";
+import { User, Lock, ArrowRight, UserPlus, Loader2, Mail, Building, Eye, EyeOff } from "lucide-react";
 import { useTheme } from "../../ThemeContext";
 import { useLanguage } from "../../LanguageContext";
 import { toast, Toaster } from "react-hot-toast";
@@ -9,13 +9,18 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
     const { isDarkMode, theme } = useTheme();
     const { t } = useLanguage();
     const [formData, setFormData] = useState({
-        userName: "",
+        firstName: "",
+        lastName: "",
+        companyName: "",
+        email: "",
         password: "",
         confirmPassword: "",
     });
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -34,13 +39,21 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
         setError("");
 
         try {
-            await authService.register(formData.userName, formData.password);
+            const signupData = {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                companyName: formData.companyName,
+                email: formData.email,
+                password: formData.password
+            };
 
-            toast.success("Admin account created successfully!");
+            await authService.register(signupData);
+
+            toast.success("Account created successfully!");
 
             // Auto login after registration
-            const loginData = await authService.login(formData.userName, formData.password);
-            onSignup(loginData.admin || loginData.user);
+            const loginData = await authService.login(formData.email, formData.password);
+            onSignup(loginData.user);
         } catch (err) {
             console.error("Signup error:", err);
             const errorMessage = err.message || "Something went wrong. Please try again.";
@@ -57,11 +70,11 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
             style={{ backgroundColor: theme.bg }}
         >
             <div
-                className="w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-300"
+                className="w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-300"
                 style={{ backgroundColor: theme.surface, borderColor: theme.border }}
             >
                 {/* Left Side - Brand / Info */}
-                <div className="md:w-2/5 p-12 text-white flex flex-col relative overflow-hidden bg-[var(--color-primary)]">
+                <div className="md:w-1/3 p-12 text-white flex flex-col relative overflow-hidden bg-[var(--color-primary)]">
                     <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] opacity-90"></div>
 
                     {/* Decorative Circles */}
@@ -73,19 +86,19 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
                             <UserPlus size={32} className="text-white" />
                         </div>
 
-                        <h2 className="text-3xl font-bold mb-4 tracking-tight">Join the Platform.</h2>
+                        <h2 className="text-3xl font-bold mb-4 tracking-tight">Join Perfect Labeler.</h2>
                         <p className="text-white/80 text-lg leading-relaxed mb-8">
-                            Create your admin account to manage labels, users, and print jobs seamlessly.
+                            Create your account to design and manage your labels with ease.
                         </p>
 
                         <div className="space-y-4">
                             <div className="flex items-center gap-3 text-white/90">
                                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                <span className="text-sm font-semibold tracking-wide">Enterprise Grade Security</span>
+                                <span className="text-sm font-semibold tracking-wide">Cloud Sync & Backup</span>
                             </div>
                             <div className="flex items-center gap-3 text-white/90">
                                 <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                                <span className="text-sm font-semibold tracking-wide">Cloud-Native Architecture</span>
+                                <span className="text-sm font-semibold tracking-wide">Multi-device Support</span>
                             </div>
                         </div>
                     </div>
@@ -103,66 +116,138 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
                 </div>
 
                 {/* Right Side - Form */}
-                <div className="md:w-3/5 p-12 md:p-16 flex flex-col justify-center bg-white dark:bg-gray-900">
-                    <div className="mb-10">
+                <div className="md:w-2/3 p-8 md:p-12 flex flex-col justify-center bg-white dark:bg-gray-900">
+                    <div className="mb-8">
                         <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: theme.text }}>{t.signup}</h1>
                         <p className="text-sm" style={{ color: theme.textMuted }}>
-                            Fill in your details to create a new workspace admin account.
+                            Fill in your details to create your workspace.
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
+                                    First Name
+                                </label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                    <input
+                                        required
+                                        type="text"
+                                        name="firstName"
+                                        value={formData.firstName}
+                                        onChange={handleChange}
+                                        placeholder="John"
+                                        className="input pl-11 py-2.5"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
+                                    Last Name
+                                </label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                    <input
+                                        required
+                                        type="text"
+                                        name="lastName"
+                                        value={formData.lastName}
+                                        onChange={handleChange}
+                                        placeholder="Doe"
+                                        className="input pl-11 py-2.5"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
-                                Username
+                                Company Name
                             </label>
                             <div className="relative group">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
                                 <input
                                     required
                                     type="text"
-                                    name="userName"
-                                    value={formData.userName}
+                                    name="companyName"
+                                    value={formData.companyName}
                                     onChange={handleChange}
-                                    placeholder="Enter username"
-                                    className="input pl-11 py-3"
+                                    placeholder="Enter your company name"
+                                    className="input pl-11 py-2.5"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
-                                {t.password}
+                                Email Address
                             </label>
                             <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
                                 <input
                                     required
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
                                     onChange={handleChange}
-                                    placeholder="••••••••"
-                                    className="input pl-11 py-3"
+                                    placeholder="john@example.com"
+                                    className="input pl-11 py-2.5"
                                 />
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
-                                {t.confirmPassword}
-                            </label>
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
-                                <input
-                                    required
-                                    type="password"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="••••••••"
-                                    className="input pl-11 py-3"
-                                />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
+                                    {t.password}
+                                </label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                    <input
+                                        required
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        className="input pl-11 pr-11 py-2.5"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>
+                                    {t.confirmPassword}
+                                </label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={18} />
+                                    <input
+                                        required
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="••••••••"
+                                        className="input pl-11 pr-11 py-2.5"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -175,7 +260,7 @@ const Signup = ({ onSignup, onSwitchToLogin }) => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="btn btn-primary w-full py-4 text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-primary/20 flex items-center justify-center gap-3 group"
+                            className="btn btn-primary w-full py-3.5 text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-primary/20 flex items-center justify-center gap-3 group"
                         >
                             {loading ? (
                                 <Loader2 className="animate-spin" size={20} />

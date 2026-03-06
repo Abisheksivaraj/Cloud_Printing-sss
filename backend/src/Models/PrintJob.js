@@ -8,7 +8,7 @@ const printJobSchema = new mongoose.Schema({
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "admin",
+        ref: "User",
         required: true,
     },
     printerName: {
@@ -76,6 +76,30 @@ const printJobSchema = new mongoose.Schema({
     errorMessage: {
         type: String,
         default: null,
+    },
+    errorLog: [{
+        labelIndex: { type: Number },
+        labelName: { type: String },
+        errorType: {
+            type: String,
+            enum: ["printer_disconnected", "printer_offline", "printer_error", "paper_jam", "out_of_paper", "out_of_ribbon", "connection_timeout", "driver_error", "data_error", "render_error", "unknown"],
+            default: "unknown",
+        },
+        message: { type: String },
+        severity: {
+            type: String,
+            enum: ["info", "warning", "error", "critical"],
+            default: "error",
+        },
+        timestamp: { type: Date, default: Date.now },
+        resolved: { type: Boolean, default: false },
+    }],
+    errorDetails: {
+        category: { type: String, default: null },
+        printerState: { type: String, default: null },
+        totalErrors: { type: Number, default: 0 },
+        firstErrorAt: { type: Date, default: null },
+        lastErrorAt: { type: Date, default: null },
     },
     startedAt: {
         type: Date,

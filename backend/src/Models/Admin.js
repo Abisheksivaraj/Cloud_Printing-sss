@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const adminSchema = new mongoose.Schema({
     userName: {
         type: String,
         required: false,
@@ -31,42 +31,25 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    needsPasswordSet: {
-        type: Boolean,
-        default: false,
-    },
     companyName: {
         type: String,
         required: true,
     },
     role: {
         type: String,
-        enum: ["user", "admin", "superadmin", "manager", "designer", "operator"],
-        default: "user",
+        enum: ["admin", "superadmin"],
+        default: "superadmin",
     },
     isActive: {
         type: Boolean,
         default: true,
     },
-    invitedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null,
-    },
-    inviteToken: {
+    currentSessionId: {
         type: String,
-        default: null,
-    },
-    inviteExpires: {
-        type: Date,
         default: null,
     },
     lastLogin: {
         type: Date,
-        default: null,
-    },
-    currentSessionId: {
-        type: String,
         default: null,
     },
     createdAt: {
@@ -77,13 +60,12 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-});
+}, { collection: 'admins' });
 
-// Update the updatedAt timestamp before saving
-userSchema.pre("save", function (next) {
+adminSchema.pre("save", function (next) {
     this.updatedAt = Date.now();
     next();
 });
 
-const User = mongoose.model("User", userSchema);
-module.exports = User;
+const Admin = mongoose.model("Admin", adminSchema);
+module.exports = Admin;

@@ -1,4 +1,6 @@
 const jwt = require("jsonwebtoken");
+const User = require("../Models/User");
+const Admin = require("../Models/Admin");
 
 
 // Middleware to verify JWT token
@@ -14,11 +16,23 @@ const authenticateToken = (req, res, next) => {
             });
         }
 
-        jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+        jwt.verify(token, process.env.SECRET_KEY, async (err, decoded) => {
             if (err) {
                 return res.status(403).json({
                     success: false,
                     message: "Invalid or expired token.",
+                });
+            }
+
+            // Check if session is still active
+            let user = await User.findById(decoded.id);
+            if (!user) {
+                user = await Admin.findById(decoded.id);
+            }
+            if (!user || (user.currentSessionId && decoded.sessionId && user.currentSessionId !== decoded.sessionId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Session expired or active on another device.",
                 });
             }
 

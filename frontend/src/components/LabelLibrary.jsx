@@ -13,7 +13,8 @@ import {
   LayoutGrid,
   Filter,
   Archive,
-  ArchiveRestore
+  ArchiveRestore,
+  CheckCircle
 } from "lucide-react";
 import CreateLabelModal from "../components/Models/CreateLabelModal";
 import ImportDataModal from "../components/Models/ImportDataModal";
@@ -22,6 +23,7 @@ import GeneratedLabelsPreview from "../components/Models/GeneratedLabelsPreview"
 import { useLanguage } from "../LanguageContext";
 import AIChatbot from "./designer/AIChatbot";
 import { useTheme } from "../ThemeContext";
+import { useAlert } from "../AlertContext";
 
 const LabelLibrary = ({
   labels,
@@ -30,9 +32,11 @@ const LabelLibrary = ({
   onDeleteLabel,
   onUpdateStatus,
   onNavigate,
+  user,
 }) => {
   const { t } = useLanguage();
   const { theme, isDarkMode } = useTheme();
+  const { showConfirm, showPrompt } = useAlert();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -41,6 +45,9 @@ const LabelLibrary = ({
   const [labelToPrint, setLabelToPrint] = useState(null);
   const [generatedLabels, setGeneratedLabels] = useState([]);
   const [showGeneratedPreview, setShowGeneratedPreview] = useState(false);
+
+  const userRole = user?.role?.toLowerCase();
+  const isOperator = userRole === "operator";
 
   const filteredLabels = labels.filter((label) =>
     label.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -60,6 +67,20 @@ const LabelLibrary = ({
     setGeneratedLabels(labels);
     setShowImportModal(false);
     setShowGeneratedPreview(true);
+  };
+
+  const handleEditClick = async (label) => {
+    if (label.status === "published") {
+      const confirmDraft = await showConfirm(
+        "Published labels cannot be edited directly. Would you like to convert this template to Draft mode to make changes?"
+      );
+      if (confirmDraft) {
+        onUpdateStatus(label.id || label._id, "draft");
+        onEditLabel({ ...label, status: "draft" });
+      }
+    } else {
+      onEditLabel(label);
+    }
   };
 
   return (
@@ -109,13 +130,15 @@ const LabelLibrary = ({
               )}
             </div>
 
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
-            >
-              <Plus size={20} />
-              <span>{t.createNewLabel}</span>
-            </button>
+            {!isOperator && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-6 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus size={20} />
+                <span>{t.createNewLabel}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -196,7 +219,7 @@ const LabelLibrary = ({
                   ? "Click \"Create New Label\" above to design your first label template."
                   : "Try a different search term."}
               </p>
-              {labels.length === 0 && (
+              {!isOperator && labels.length === 0 && (
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="px-5 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2"
@@ -227,7 +250,7 @@ const LabelLibrary = ({
                         </h3>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500">
-                            {label.labelSize?.width || 100} × {label.labelSize?.height || 80}mm
+                            {Math.round(label.labelSize?.width || 100)} × {Math.round(label.labelSize?.height || 80)}mm
                           </span>
                           <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${label.status === 'published' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                             label.status === 'archived' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
@@ -248,12 +271,18 @@ const LabelLibrary = ({
                   {/* Preview Area */}
                   <div className="h-48 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center p-6 relative overflow-hidden group-hover:bg-gray-100 dark:group-hover:bg-gray-900 transition-colors">
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--color-primary)]/5 flex items-center justify-center backdrop-blur-sm z-10">
-                      <button
-                        onClick={() => onEditLabel(label)}
-                        className="bg-white dark:bg-gray-800 text-[var(--color-primary)] px-6 py-2 rounded-full font-bold shadow-lg transform scale-90 group-hover:scale-100 transition-transform"
-                      >
-                        Open Editor
-                      </button>
+                      {!isOperator ? (
+                        <button
+                          onClick={() => handleEditClick(label)}
+                          className="bg-white dark:bg-gray-800 text-[var(--color-primary)] px-6 py-2 rounded-full font-bold shadow-lg transform scale-90 group-hover:scale-100 transition-transform"
+                        >
+                          Open Editor
+                        </button>
+                      ) : (
+                        <div className="bg-white/90 dark:bg-gray-800/90 text-gray-500 px-6 py-2 rounded-full font-bold shadow-sm">
+                          View Only
+                        </div>
+                      )}
                     </div>
 
                     {label.elements && label.elements.length > 0 ? (
@@ -279,51 +308,67 @@ const LabelLibrary = ({
                   {/* Actions Footer */}
                   <div className="p-4 bg-gray-50/50 dark:bg-gray-900/20 flex items-center justify-between gap-2 border-t" style={{ borderColor: theme.border }}>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleImportData(label)}
-                        disabled={label.status === 'archived'}
-                        className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={label.status === 'archived' ? "Archived - Cannot Import" : "Import Data"}
-                      >
-                        <Upload size={18} />
-                      </button>
-                      <button
-                        onClick={() => handlePrint(label)}
-                        disabled={label.status === 'archived'}
-                        className="p-2 text-gray-500 hover:text-[var(--color-secondary)] hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={label.status === 'archived' ? "Archived - Cannot Print" : "Print"}
-                      >
-                        <Printer size={18} />
-                      </button>
+                      {label.status === 'draft' ? (
+                        <button
+                          onClick={() => onUpdateStatus(label.id, 'published')}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all hover:scale-105 active:scale-95"
+                          title="Publish Template"
+                        >
+                          <CheckCircle size={14} />
+                          Publish
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleImportData(label)}
+                            disabled={label.status === 'archived'}
+                            className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={label.status === 'archived' ? "Archived - Cannot Import" : "Import Data"}
+                          >
+                            <Upload size={18} />
+                          </button>
+                          <button
+                            onClick={() => handlePrint(label)}
+                            disabled={label.status === 'archived'}
+                            className="p-2 text-gray-500 hover:text-[var(--color-secondary)] hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={label.status === 'archived' ? "Archived - Cannot Print" : "Print"}
+                          >
+                            <Printer size={18} />
+                          </button>
+                        </>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onEditLabel(label)}
-                        className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => onUpdateStatus(label.id, label.status === 'archived' ? 'published' : 'archived')}
-                        className="p-2 text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
-                        title={label.status === 'archived' ? "Restore Template" : "Archive Template"}
-                      >
-                        {label.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (window.confirm(`Delete "${label.name}"?`)) {
-                            onDeleteLabel(label.id);
-                          }
-                        }}
-                        className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                    {!isOperator && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEditClick(label)}
+                          className="p-2 text-gray-500 hover:text-[var(--color-primary)] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => onUpdateStatus(label.id, label.status === 'archived' ? 'published' : 'archived')}
+                          className="p-2 text-gray-500 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+                          title={label.status === 'archived' ? "Restore Template" : "Archive Template"}
+                        >
+                          {label.status === 'archived' ? <ArchiveRestore size={18} /> : <Archive size={18} />}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const confirmDelete = await showConfirm(`Are you sure you want to delete "${label.name}"? This action cannot be undone.`);
+                            if (confirmDelete) {
+                              onDeleteLabel(label.id);
+                            }
+                          }}
+                          className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -372,17 +417,24 @@ const LabelLibrary = ({
       )}
 
       {/* AI Assistant Chatbot */}
-      <AIChatbot
-        onGenerateElements={(newElements, nextLabelSize, isNewRequest) => {
-          onCreateLabel({
-            name: `AI Design - ${new Date().toLocaleTimeString()}`,
-            elements: newElements,
-            labelSize: nextLabelSize || { width: 100, height: 80 }
-          });
-        }}
-        labelSize={{ width: 100, height: 80 }}
-        generateId={() => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`}
-      />
+      {!isOperator && (
+        <AIChatbot
+          onGenerateElements={async (newElements, nextLabelSize, isNewRequest) => {
+            const defaultName = `AI Design - ${new Date().toLocaleTimeString()}`;
+            const customName = await showPrompt("Enter a name for this design:", defaultName);
+
+            if (customName === null) return; // Abort saving if cancel is clicked
+
+            onCreateLabel({
+              name: customName || defaultName,
+              elements: newElements,
+              labelSize: nextLabelSize || { width: 100, height: 80 }
+            });
+          }}
+          labelSize={{ width: 100, height: 80 }}
+          generateId={() => `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`}
+        />
+      )}
     </div>
   );
 };

@@ -313,33 +313,101 @@ const RollPrinterPreview = ({ labels, labelSettings, onClose }) => {
 
   const handlePrintAll = async () => {
     try {
-      // Get current printer info or default
+      // Step 1: Check printer connectivity
       let printerName = "System Default";
+      let printerConnected = false;
+      let printerError = null;
+
       try {
         const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
         if (printersData.printers?.length > 0) {
           const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
           printerName = defaultPrinter.name;
+
+          // Check specific printer status
+          try {
+            const statusData = await apiCall(API_ENDPOINTS.PRINTER_STATUS(printerName));
+            printerConnected = statusData.isConnected;
+            if (!printerConnected) {
+              printerError = `Printer "${printerName}" is offline or disconnected`;
+            }
+          } catch (statusErr) {
+            printerError = `Unable to check status of printer "${printerName}": ${statusErr.message}`;
+          }
+        } else {
+          printerError = "No printers found. Please connect a printer and try again.";
         }
       } catch (e) {
-        console.warn("Could not fetch printer info", e);
+        printerError = `Could not fetch printers: ${e.message}`;
       }
 
       // Calculate print metrics
       const totalAvailable = labels[0]?.importContext?.totalAvailable || labels.length;
-      const printedRecords = labels.length;
       const printedLengthMm = (rollHeight / MM_TO_PX).toFixed(1);
+      const documentName = labels[0]?.templateName ? `Bulk Print - ${labels[0].templateName}` : `Bulk Print - ${labels.length} Labels`;
 
-      // Create print job record
+      // Step 2: If printer not connected, create a FAILED job with error details
+      if (printerError) {
+        const errorLog = labels.map((lbl, idx) => ({
+          labelIndex: idx,
+          labelName: lbl.templateName || `Label ${idx + 1}`,
+          errorType: "printer_disconnected",
+          message: printerError,
+          severity: "critical",
+          timestamp: new Date().toISOString(),
+        }));
+
+        const jobData = {
+          printerName,
+          documentName,
+          templateId: labels[0]?.importContext?.templateId || null,
+          documentType: "label",
+          copies: labels.length,
+          priority: "normal",
+          status: "failed",
+          totalRecords: totalAvailable,
+          printedRecords: 0,
+          printedLength: 0,
+          errorMessage: printerError,
+          errorLog,
+          errorDetails: {
+            category: "printer_disconnected",
+            printerState: "disconnected",
+            totalErrors: labels.length,
+            firstErrorAt: new Date().toISOString(),
+            lastErrorAt: new Date().toISOString(),
+          },
+          sourceData: labels[0]?.importContext?.sourceData || [],
+          metadata: {
+            labelWidth: labelSize.width,
+            labelHeight: labelSize.height,
+            columns,
+            isBulk: true,
+            mappings: labels[0]?.importContext?.mappings || {},
+          },
+        };
+
+        try {
+          await printService.createJob(jobData);
+        } catch (saveErr) {
+          console.error("Failed to save error to history:", saveErr);
+        }
+
+        alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
+        return;
+      }
+
+      // Step 3: Printer is connected - create print job and print
       const jobData = {
         printerName,
-        documentName: labels[0]?.templateName ? `Bulk Print - ${labels[0].templateName}` : `Bulk Print - ${labels.length} Labels`,
+        documentName,
+        templateId: labels[0]?.importContext?.templateId || null,
         documentType: "label",
         copies: labels.length,
         priority: "normal",
-        status: "pending",
+        status: "printing",
         totalRecords: totalAvailable,
-        printedRecords: printedRecords,
+        printedRecords: 0,
         printedLength: parseFloat(printedLengthMm),
         sourceData: labels[0]?.importContext?.sourceData || [],
         metadata: {
@@ -347,23 +415,83 @@ const RollPrinterPreview = ({ labels, labelSettings, onClose }) => {
           labelHeight: labelSize.height,
           columns,
           isBulk: true,
-          mappings: labels[0]?.importContext?.mappings || {}
-        }
+          mappings: labels[0]?.importContext?.mappings || {},
+        },
       };
 
       const { job } = await printService.createJob(jobData);
 
-      // Trigger browser print
-      window.print();
+      // Use afterprint event to detect completion
+      const printPromise = new Promise((resolve) => {
+        const handleAfterPrint = () => {
+          window.removeEventListener('afterprint', handleAfterPrint);
+          resolve();
+        };
+        window.addEventListener('afterprint', handleAfterPrint);
+
+        // Trigger browser print
+        window.print();
+      });
+
+      await printPromise;
 
       // Update status to completed
-      setTimeout(() => {
-        printService.updateStatus(job._id, "completed");
-      }, 2000);
+      try {
+        await printService.updateStatus(job._id, "completed", null, [{
+          labelIndex: 0,
+          labelName: documentName,
+          errorType: "unknown",
+          message: "Job successfully sent to system print spooler",
+          severity: "info",
+          timestamp: new Date().toISOString(),
+        }]);
+      } catch (updateErr) {
+        console.error("Failed to update job status:", updateErr);
+      }
 
     } catch (error) {
-      console.error("Print tracking failed:", error);
-      window.print();
+      console.error("Print failed:", error);
+
+      // Log the error to history
+      const errorLog = [{
+        labelIndex: 0,
+        labelName: labels[0]?.templateName || "Bulk Print",
+        errorType: "printer_error",
+        message: error.message || "An unexpected error occurred during printing",
+        severity: "error",
+        timestamp: new Date().toISOString(),
+      }];
+
+      try {
+        await printService.createJob({
+          printerName: "Unknown",
+          documentName: labels[0]?.templateName ? `Bulk Print - ${labels[0].templateName}` : `Bulk Print - ${labels.length} Labels`,
+          documentType: "label",
+          copies: labels.length,
+          status: "failed",
+          totalRecords: labels.length,
+          printedRecords: 0,
+          errorMessage: error.message || "Unexpected print error",
+          errorLog,
+          errorDetails: {
+            category: "printer_error",
+            printerState: "error",
+            totalErrors: 1,
+            firstErrorAt: new Date().toISOString(),
+            lastErrorAt: new Date().toISOString(),
+          },
+          metadata: {
+            labelWidth: labelSize.width,
+            labelHeight: labelSize.height,
+            columns,
+            isBulk: true,
+          },
+        });
+      } catch (saveErr) {
+        console.error("Failed to save error to history:", saveErr);
+      }
+
+      alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
     }
   };
 

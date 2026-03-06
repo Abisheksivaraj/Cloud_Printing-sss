@@ -4,12 +4,15 @@ import './index.css'
 import App from './App.jsx'
 import { ThemeProvider } from './ThemeContext'
 import { LanguageProvider } from './LanguageContext'
+import { AlertProvider } from './AlertContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider>
       <LanguageProvider>
-        <App />
+        <AlertProvider>
+          <App />
+        </AlertProvider>
       </LanguageProvider>
     </ThemeProvider>
   </StrictMode>,

@@ -19,11 +19,7 @@ import { useTheme } from "../../ThemeContext";
 
 const AdminDashboard = () => {
     const { theme, isDarkMode } = useTheme();
-    const [users, setUsers] = useState([
-        { id: 1, firstName: "Alice", lastName: "Smith", email: "alice@atpl.com", mobile: "+1 555-0101", role: "Manager", status: "Active" },
-        { id: 2, firstName: "Bob", lastName: "Jones", email: "bob@atpl.com", mobile: "+1 555-0102", role: "Designer", status: "Active" },
-        { id: 3, firstName: "Charlie", lastName: "Davis", email: "charlie@atpl.com", mobile: "+1 555-0103", role: "Operator", status: "Away" },
-    ]);
+    const [users, setUsers] = useState([]);
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -56,21 +52,63 @@ const AdminDashboard = () => {
                 })
             });
 
-            toast.success("Invitation sent successfully!");
-            setUsers([...users, { ...newUser, id: users.length + 1, status: "Invited" }]);
+            toast.success("User created successfully!");
+            await loadUsers();
             setShowAddModal(false);
             setNewUser({ firstName: "", lastName: "", email: "", mobile: "", role: "Designer" });
         } catch (error) {
-            console.error("Invite error:", error);
-            toast.error(error.message || "Failed to send invitation");
+            console.error("Create user error:", error);
+            toast.error(error.message || "Failed to create user");
         } finally {
             setLoading(false);
         }
     };
 
+    const loadUsers = async () => {
+        try {
+            const data = await apiCall(API_ENDPOINTS.USERS);
+            if (data && data.users) {
+                const formattedUsers = data.users.map(u => ({
+                    id: u._id,
+                    firstName: u.firstName || "",
+                    lastName: u.lastName || "",
+                    email: u.email || "",
+                    mobile: u.mobileNumber || "N/A",
+                    role: u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : "User",
+                    status: u.isActive ? "Active" : "Inactive"
+                }));
+                setUsers(formattedUsers);
+            }
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+        }
+    };
+
+    React.useEffect(() => {
+        loadUsers();
+    }, []);
+
+    const handleToggleStatus = async (userId, currentStatus, userName) => {
+        try {
+            const newStatus = currentStatus !== "Active";
+            const response = await apiCall(API_ENDPOINTS.USER_BY_ID(userId), {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isActive: newStatus }),
+            });
+            if (response.success) {
+                toast.success(`${userName} successfully marked as ${newStatus ? 'Active' : 'Inactive'}`);
+                await loadUsers();
+            }
+        } catch (error) {
+            console.error("Failed to toggle status:", error);
+            toast.error("Failed to update user status");
+        }
+    };
+
     const filteredUsers = users.filter(u =>
         `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (u.email || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -115,7 +153,7 @@ const AdminDashboard = () => {
                             className="px-6 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
                         >
                             <UserPlus size={20} />
-                            <span>Add User</span>
+                            <span>Create User</span>
                         </button>
                     </div>
                 </div>
@@ -199,7 +237,7 @@ const AdminDashboard = () => {
                                         <td className="px-6 py-4">
                                             <span
                                                 className={`inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                                                ${user.role === 'Manager' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
+                                                ${user.role === 'Admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' :
                                                         user.role === 'Designer' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
                                                             'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                                                     }`}
@@ -209,7 +247,15 @@ const AdminDashboard = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <span className={`w-2.5 h-2.5 rounded-full ${user.status === 'Active' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-gray-400'}`}></span>
+                                                <button
+                                                    onClick={() => handleToggleStatus(user.id, user.status, `${user.firstName} ${user.lastName}`)}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${user.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`}
+                                                    title={`Toggle Status (Currently ${user.status})`}
+                                                >
+                                                    <span
+                                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${user.status === 'Active' ? 'translate-x-6' : 'translate-x-1'}`}
+                                                    />
+                                                </button>
                                                 <span className="text-sm font-medium" style={{ color: theme.text }}>{user.status}</span>
                                             </div>
                                         </td>
@@ -246,8 +292,8 @@ const AdminDashboard = () => {
                         >
                             <div className="border-b p-6 flex items-center justify-between" style={{ borderColor: theme.border }}>
                                 <div>
-                                    <h3 className="text-xl font-bold" style={{ color: theme.text }}>Invite New User</h3>
-                                    <p className="text-sm" style={{ color: theme.textMuted }}>Send an invitation to join your workspace.</p>
+                                    <h3 className="text-xl font-bold" style={{ color: theme.text }}>Create New User</h3>
+                                    <p className="text-sm" style={{ color: theme.textMuted }}>Enter details to create a new team member.</p>
                                 </div>
                                 <button
                                     onClick={() => setShowAddModal(false)}
@@ -328,7 +374,7 @@ const AdminDashboard = () => {
                                 <div className="space-y-4">
                                     <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>Assign Role</label>
                                     <div className="grid grid-cols-3 gap-4">
-                                        {["Manager", "Designer", "Operator"].map((role) => (
+                                        {["Admin", "Designer", "Operator"].map((role) => (
                                             <button
                                                 key={role}
                                                 type="button"
@@ -359,7 +405,7 @@ const AdminDashboard = () => {
                                         disabled={loading}
                                         className="px-8 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/30 transition-all active:scale-95 flex items-center gap-2"
                                     >
-                                        {loading ? <Loader2 className="animate-spin" size={20} /> : "Send Invitation"}
+                                        {loading ? <Loader2 className="animate-spin" size={20} /> : "Create"}
                                     </button>
                                 </div>
                             </form>

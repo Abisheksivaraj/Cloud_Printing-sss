@@ -47,29 +47,49 @@ function getStatusText(status) {
 // Check if printer is actually connected and available
 async function isPrinterConnected(printerName) {
   try {
+    // Get basic status from WMI
     const { stdout } = await execPromise(
-      `powershell -Command "Get-WmiObject -Class Win32_Printer -Filter \\"Name='${printerName.replace(/'/g, "''")}'\\" | Select-Object Name, WorkOffline, PrinterStatus, DetectedErrorState | ConvertTo-Json"`,
+      `powershell -Command "Get-WmiObject -Class Win32_Printer -Filter \\"Name='${printerName.replace(/'/g, "''")}'\\" | Select-Object Name, WorkOffline, PrinterStatus, DetectedErrorState, ExtendedPrinterStatus, Availability | ConvertTo-Json"`,
     );
 
-    const printerStatus = JSON.parse(stdout);
+    if (!stdout || stdout.trim() === "") return false;
 
+    const psData = JSON.parse(stdout);
+    const printerStatus = Array.isArray(psData) ? psData[0] : psData;
+
+    // Offline flag is the most reliable in standard drivers
     if (printerStatus.WorkOffline === true) {
+      console.log(`Printer ${printerName} is WorkOffline=true`);
       return false;
     }
 
-    if (printerStatus.PrinterStatus === 7) {
+    // Status 2 (Unknown) often means disconnected for USB
+    // Status 7 (Offline)
+    if (printerStatus.PrinterStatus === 7 || printerStatus.PrinterStatus === 2) {
+      console.log(`Printer ${printerName} has Status ${printerStatus.PrinterStatus}`);
       return false;
     }
 
-    if (printerStatus.PortName && printerStatus.PortName.includes("USB")) {
-      try {
-        const { stdout: usbCheck } = await execPromise(
-          `powershell -Command "Get-Printer -Name '${printerName.replace(/'/g, "''")}' | Select-Object PortName, PrinterStatus"`,
-        );
-        return printerStatus.PrinterStatus !== 7;
-      } catch (usbError) {
-        return false;
+    // More aggressive check for USB printers using Get-Printer (modern PowerShell)
+    try {
+      const { stdout: printerCheck } = await execPromise(
+        `powershell -Command "Get-Printer -Name '${printerName.replace(/'/g, "''")}' | Select-Object PrinterStatus, PortName | ConvertTo-Json"`,
+      );
+
+      if (printerCheck && printerCheck.trim() !== "") {
+        const detail = JSON.parse(printerCheck);
+        // Map common offline status strings from modern PowerShell
+        const offlineKeywords = ["offline", "disconnected", "not available"];
+        if (detail.PrinterStatus) {
+          const lowStatus = detail.PrinterStatus.toString().toLowerCase();
+          if (offlineKeywords.some(kw => lowStatus.includes(kw))) {
+            console.log(`Get-Printer says ${printerName} is ${detail.PrinterStatus}`);
+            return false;
+          }
+        }
       }
+    } catch (e) {
+      // Ignored - fallback to WMI
     }
 
     return true;

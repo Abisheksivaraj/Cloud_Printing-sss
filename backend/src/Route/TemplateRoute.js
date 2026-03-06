@@ -23,11 +23,12 @@ router.get("/api/templates", authenticateToken, async (req, res) => {
             templates,
         });
     } catch (error) {
-        console.error("Error fetching templates:", error);
+        console.error("Critical API Error in GET /api/templates:", error);
         res.status(500).json({
             success: false,
             message: "Failed to fetch templates",
             error: error.message,
+            stack: process.env.NODE_ENV === "development" ? error.stack : undefined
         });
     }
 });

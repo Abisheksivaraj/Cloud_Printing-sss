@@ -8,13 +8,13 @@ import { generateLabel, explainPrompt } from "./labelEngine";
 
 // ─── Quick prompts ────────────────────────────────────────────────────────────
 const QUICK_PROMPTS = [
-    { icon: "🚚", label: "Shipper", prompt: "Create a shipper label of 100x150mm" },
-    { icon: "📦", label: "Product", prompt: "Design a product label 80x60mm" },
-    { icon: "🏥", label: "Pharma", prompt: "Create a pharmaceutical label 70x50mm for Amoxicillin 500mg" },
-    { icon: "💲", label: "Price Tag", prompt: "Make a retail price tag 50x40mm" },
-    { icon: "🏭", label: "Warehouse", prompt: "Design a warehouse location label 100x60mm zone A" },
-    { icon: "📬", label: "Address", prompt: "Create an address label 100x55mm" },
-    { icon: "🏷️", label: "Asset Tag", prompt: "Create an asset tag 90x60mm" },
+    { icon: "🛒", label: "Ration Factory", prompt: "Create a 100x50mm Ration Factory food packing label" },
+    { icon: "📅", label: "ABCD Expiry", prompt: "Design a 50x50mm expiry label for item ABCD" },
+    { icon: "🚚", label: "Shipper 4x6", prompt: "Create a shipper 4x6 label with PO and routing barcodes" },
+    { icon: "📦", label: "Logistic 4x6", prompt: "Design a logistics 4x6 label with SSCC and red labels" },
+    { icon: "🛡️", label: "Traceability", prompt: "Design a batch traceability label" },
+    { icon: "🏷️", label: "Price Tag", prompt: "Make a retail price tag" },
+    { icon: "📊", label: "GS1-128", prompt: "Design a full GS1-128 composite label" },
 ];
 
 const MSG = { USER: "user", BOT: "bot", ERROR: "error" };
