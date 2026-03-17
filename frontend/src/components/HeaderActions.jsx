@@ -40,7 +40,7 @@ export const AppHeader = ({ onNavigate, currentView, user }) => {
                 </div>
                 <div className="flex">
                   <h1 className="flex flex-col items-start leading-tight" style={{ color: theme.text }}>
-                    <span className="text-base font-black tracking-tight">ATPL's Perfect Labeler</span>
+                    <span className="text-base font-black tracking-tight">Perfect Labeler</span>
                     <span className="px-1.5 py-0.5 rounded-md bg-[var(--color-primary)] text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
                       Pro Edition
                     </span>
