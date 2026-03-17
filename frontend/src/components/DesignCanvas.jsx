@@ -890,6 +890,7 @@ const DesignCanvas = forwardRef(
               setEditingElementId(newElement.id);
               setEditingTextValue("");
             }, 20);
+            if (onElementCreated) onElementCreated();
             return;
           }
 
@@ -932,6 +933,7 @@ const DesignCanvas = forwardRef(
             setEditingElementId(newElement.id);
             setEditingTextValue("");
           }, 20);
+          if (onElementCreated) onElementCreated();
           return;
         }
 
@@ -1029,6 +1031,7 @@ const DesignCanvas = forwardRef(
           setBarcodeDrawStart(null);
           setTempBarcode(null);
           saveToHistory(newElements);
+          if (onElementCreated) onElementCreated();
         } else if (isDrawingShape && shapeDrawStart && currentShapeType) {
           const width = Math.abs(x - shapeDrawStart.x);
           const height = Math.abs(y - shapeDrawStart.y);
@@ -1063,6 +1066,7 @@ const DesignCanvas = forwardRef(
           setShapeDrawStart(null);
           setTempShape(null);
           saveToHistory(newElements);
+          if (onElementCreated) onElementCreated();
         }
       },
       [
@@ -1992,6 +1996,8 @@ const DesignCanvas = forwardRef(
                   transform: `scale(${displayZoom / 100})`,
                   transformOrigin: "center center",
                   backgroundColor: "#ffffff", // Always white for canvas representing paper
+                  border: "1px solid #000000",
+                  borderRadius: "3px",
                   boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
                   backgroundImage: showGrid
                     ? `radial-gradient(${gridColor} 1px, transparent 1px)`

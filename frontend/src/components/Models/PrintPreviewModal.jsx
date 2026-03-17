@@ -54,6 +54,7 @@ const RenderLabel = ({ label }) => {
           top: element.y,
           width: element.width,
           height: element.height,
+          transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
           fontSize: element.fontSize,
           fontFamily: element.fontFamily,
           fontWeight: element.fontWeight,
@@ -68,6 +69,7 @@ const RenderLabel = ({ label }) => {
           borderRadius: element.borderRadius
             ? `${element.borderRadius}px`
             : undefined,
+          opacity: element.opacity !== undefined ? element.opacity : 1,
           boxSizing: "border-box",
         };
 
@@ -87,7 +89,11 @@ const RenderLabel = ({ label }) => {
                       ? "flex-end"
                       : "flex-start",
                 padding: "0 4px",
-                lineHeight: "1.2",
+                lineHeight: element.lineHeight || "1.2",
+                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                fontWeight: element.fontWeight || "normal",
+                fontStyle: element.fontStyle || "normal",
+                textDecoration: element.textDecoration || "none",
               }}
             >
               <span
@@ -139,6 +145,7 @@ const RenderLabel = ({ label }) => {
                 width: Math.abs(x2 - x1),
                 height: Math.abs(y2 - y1),
                 overflow: "visible",
+                opacity: element.opacity !== undefined ? element.opacity : 1,
               }}
             >
               <line
@@ -167,6 +174,82 @@ const RenderLabel = ({ label }) => {
         if (element.type === "circle") {
           return (
             <div key={elIndex} style={{ ...style, borderRadius: "50%" }}></div>
+          );
+        }
+
+        if (element.type === "image") {
+          return (
+            <div key={elIndex} style={style}>
+              <img
+                src={element.src || element.content}
+                alt={element.alt || ""}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: element.objectFit || "contain",
+                  display: "block",
+                }}
+                crossOrigin="anonymous"
+              />
+            </div>
+          );
+        }
+
+        if (element.type === "table") {
+          return (
+            <div
+              key={elIndex}
+              style={{
+                position: "absolute",
+                left: element.x,
+                top: element.y,
+                width: element.width,
+                height: element.height,
+                transform: element.rotation ? `rotate(${element.rotation}deg)` : undefined,
+                opacity: element.opacity !== undefined ? element.opacity : 1,
+                boxSizing: "border-box",
+                overflow: "hidden",
+              }}
+            >
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  tableLayout: "fixed",
+                  width: "100%",
+                  height: "100%",
+                }}
+              >
+                <tbody>
+                  {Array.from({ length: element.rows || 2 }, (_, rowIdx) => (
+                    <tr key={rowIdx}>
+                      {Array.from({ length: element.cols || 2 }, (_, colIdx) => {
+                        const cellValue = element.tableData?.[rowIdx]?.[colIdx] ?? "";
+                        return (
+                          <td
+                            key={colIdx}
+                            style={{
+                              width: `${100 / (element.cols || 2)}%`,
+                              height: `${100 / (element.rows || 2)}%`,
+                              border: `${element.borderWidth || 1}px ${element.borderStyle || "solid"} ${element.borderColor || "#000000"}`,
+                              backgroundColor: element.backgroundColor || "transparent",
+                              padding: 2,
+                              fontSize: element.fontSize || 11,
+                              fontFamily: element.fontFamily || "Arial",
+                              overflow: "hidden",
+                              boxSizing: "border-box",
+                            }}
+                          >
+                            <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {cellValue}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           );
         }
 
@@ -610,14 +693,6 @@ const PrintPreviewModal = ({ label, onClose }) => {
                       gap: `${verticalGap * MM_TO_PX}px ${horizontalGap * MM_TO_PX}px`,
                       padding: `${margins.top * MM_TO_PX}px ${margins.right * MM_TO_PX}px ${margins.bottom * MM_TO_PX}px ${margins.left * MM_TO_PX}px`,
                       backgroundColor: "#fff",
-                      backgroundImage: `
-                            linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
-                            linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
-                            linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
-                            linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
-                        `,
-                      backgroundSize: '20px 20px',
-                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
                     }}
                   >
                     {Array.from({ length: cols * rows }).map((_, i) => (
@@ -628,9 +703,10 @@ const PrintPreviewModal = ({ label, onClose }) => {
                           height: labelH,
                           position: "relative",
                           background: "#fff",
-                          border: "1px dashed #e2e8f0", // Light border for preview
+                          border: "1px solid #000000",
                           overflow: "hidden",
                           boxSizing: "border-box",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
                         }}
                       >
                         {showCutMarks && <CutMarks />}
@@ -704,6 +780,7 @@ const PrintPreviewModal = ({ label, onClose }) => {
                   position: "relative",
                   boxSizing: "border-box",
                   overflow: "hidden",
+                  border: "1px solid #000000",
                 }}
               >
                 {showCutMarks && <CutMarks />}
@@ -719,8 +796,6 @@ const PrintPreviewModal = ({ label, onClose }) => {
         @media print {
           * {
             visibility: hidden !important;
-            margin: 0 !important;
-            padding: 0 !important;
           }
 
           .print-container,
@@ -735,12 +810,14 @@ const PrintPreviewModal = ({ label, onClose }) => {
           }
 
           .print-container {
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
+            width: 100vw !important;
+            height: 100vh !important;
             display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
           .print-sheet {
@@ -757,8 +834,25 @@ const PrintPreviewModal = ({ label, onClose }) => {
           .print-label {
             display: block !important;
             page-break-inside: avoid !important;
+            break-inside: avoid !important;
             overflow: hidden !important;
             box-sizing: border-box !important;
+          }
+
+          /* Preserve borders on all elements inside labels */
+          .print-label * {
+            border-color: inherit;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+
+          /* Ensure images render in print */
+          .print-label img {
+            display: block !important;
+            max-width: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
           @page {
@@ -770,11 +864,8 @@ const PrintPreviewModal = ({ label, onClose }) => {
           body {
             margin: 0 !important;
             padding: 0 !important;
-          }
-
-          .print-label {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
 

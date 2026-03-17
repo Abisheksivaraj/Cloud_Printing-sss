@@ -373,36 +373,56 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
 
     const newLabels = dataToGenerate.map((row, index) => {
       const clonedElements = label.elements.map((el) => {
-        // Manual mode: match column by placeholder name directly if mapping is missing
-        const columnName = importMethod === 'manual' ? getFieldName(el.content) : columnMapping[el.id];
+        const isManual = importMethod === 'manual';
+        const columnName = isManual ? null : columnMapping[el.id];
 
-        if (el.type === "barcode" && barcodeMultiMapping[el.id]) {
-          const selectedColumns = barcodeMultiMapping[el.id].filter(
-            (col) => col !== "",
-          );
-          const separator = barcodeSeparators[el.id] || " ";
+        // 1. Handle Barcode Elements
+        if (el.type === "barcode") {
+          if (isManual) {
+            const manualBarcodeVal = row[el.id];
+            if (manualBarcodeVal !== undefined) return { ...el, content: manualBarcodeVal };
+            
+            // Fallback to name match for backward compatibility
+            const field = getFieldName(el.content);
+            if (row[field] !== undefined) return { ...el, content: row[field] };
+          } else if (barcodeMultiMapping[el.id]) {
+            const selectedColumns = barcodeMultiMapping[el.id].filter(col => col !== "");
+            const separator = barcodeSeparators[el.id] || " ";
 
-          if (selectedColumns.length > 0) {
-            const combinedValue = selectedColumns
-              .map((col) => row[col] || "")
-              .filter((val) => val !== "")
-              .join(separator);
-
-            return { ...el, content: combinedValue };
-          } else if (importMethod === 'manual') {
-            // Check if manual row has a direct match for a barcode if it's treated as a single field
-            const manualBarcodeVal = row['Barcode'] || row[el.content];
-            if (manualBarcodeVal) return { ...el, content: manualBarcodeVal };
+            if (selectedColumns.length > 0) {
+              const combinedValue = selectedColumns
+                .map((col) => row[col] || "")
+                .filter((val) => val !== "")
+                .join(separator);
+              return { ...el, content: combinedValue };
+            }
           }
         }
 
-        if (el.type === "placeholder" && columnName) {
-          const importedValue = row[columnName] || "";
-          return {
-            ...el,
-            content: importedValue,
-            type: "text",
-          };
+        // 2. Handle Text/Placeholder Elements
+        const isPlaceholder = el.type === "placeholder";
+        const isDynamicText = el.type === "text" && el.content && /\{\{.+?\}\}/.test(el.content);
+
+        if (isPlaceholder || isDynamicText) {
+          if (isManual) {
+            const manualValue = row[el.id];
+            if (manualValue !== undefined) {
+              return { ...el, content: manualValue, type: "text" };
+            }
+            
+            // Fallback to field name matching
+            const field = getFieldName(el.content);
+            if (row[field] !== undefined) {
+              return { ...el, content: row[field], type: "text" };
+            }
+          } else if (columnName) {
+            const importedValue = row[columnName] || "";
+            return {
+              ...el,
+              content: importedValue,
+              type: "text",
+            };
+          }
         }
 
         return { ...el };
@@ -454,15 +474,21 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
   };
 
   const getFieldName = (content) => {
+    if (!content || typeof content !== 'string') return "";
     const match = content.match(/\{\{(.+?)\}\}/);
     return match ? match[1] : content;
   };
 
-  const placeholderElements = label.elements.filter(
-    (el) => el.type === "placeholder",
+  // Get all dynamic elements (placeholders, barcodes, and text with {{...}})
+  const dynamicElements = label.elements.filter(
+    (el) => 
+      el.type === "placeholder" || 
+      el.type === "barcode" || 
+      (el.type === "text" && el.content && /\{\{.+?\}\}/.test(el.content))
   );
 
-  const barcodeElements = label.elements.filter((el) => el.type === "barcode");
+  const placeholderElements = dynamicElements.filter(el => el.type !== "barcode");
+  const barcodeElements = dynamicElements.filter(el => el.type === "barcode");
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
@@ -488,7 +514,7 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
               </h3>
             </div>
             <p className="text-sm font-medium" style={{ color: theme.textMuted }}>
-              Mapping external data to: <span className="text-[var(--color-primary)] font-bold">{label.name}</span>
+              Mapping external data to: <span className="text-[var(--color-primary)] font-bold">{dynamicElements.length}</span>
             </p>
           </div>
           <button
@@ -517,7 +543,7 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
                   // Auto-populate columns for manual row 1 if empty
                   if (Object.keys(manualRows[0]).length === 0) {
                     const initialRow = {};
-                    placeholderElements.forEach(el => initialRow[getFieldName(el.content)] = "");
+                    dynamicElements.forEach(el => initialRow[el.id] = "");
                     setManualRows([initialRow]);
                   }
                 }}
@@ -542,7 +568,7 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
                   <button
                     onClick={() => {
                       const newRow = {};
-                      placeholderElements.forEach(el => newRow[getFieldName(el.content)] = "");
+                      dynamicElements.forEach(el => newRow[el.id] = "");
                       setManualRows([...manualRows, newRow]);
                     }}
                     className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-2 transition-all active:scale-95"
@@ -556,9 +582,9 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
                     <thead className="bg-gray-100 dark:bg-gray-900 shadow-sm">
                       <tr>
                         <th className="p-4 font-black uppercase text-xs tracking-wider text-gray-500 w-12">#</th>
-                        {placeholderElements.map((el) => (
+                        {dynamicElements.map((el) => (
                           <th key={el.id} className="p-4 font-black uppercase text-xs tracking-wider text-gray-500 whitespace-nowrap">
-                            {getFieldName(el.content)}
+                            {el.type === 'barcode' ? `Barcode (${getBarcodeTypeName(el.barcodeType)})` : getFieldName(el.content)}
                           </th>
                         ))}
                         <th className="p-4 font-black uppercase text-xs tracking-wider text-gray-500 w-12 text-center">Action</th>
@@ -568,16 +594,16 @@ const ImportDataModal = ({ label, onClose, onLabelsGenerated, initialData = null
                       {manualRows.map((row, idx) => (
                         <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30">
                           <td className="p-4 font-bold text-gray-400 text-xs">{idx + 1}</td>
-                          {placeholderElements.map((el) => {
-                            const field = getFieldName(el.content);
+                          {dynamicElements.map((el) => {
+                            const field = el.type === 'barcode' ? `Barcode (${getBarcodeTypeName(el.barcodeType)})` : getFieldName(el.content);
                             return (
                               <td key={el.id} className="p-2">
                                 <input
                                   type="text"
-                                  value={row[field] || ""}
+                                  value={row[el.id] || ""}
                                   onChange={(e) => {
                                     const updated = [...manualRows];
-                                    updated[idx][field] = e.target.value;
+                                    updated[idx][el.id] = e.target.value;
                                     setManualRows(updated);
                                   }}
                                   placeholder={`Enter ${field}...`}

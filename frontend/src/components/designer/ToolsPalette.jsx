@@ -57,7 +57,7 @@ const ToolsPalette = ({
     if (tool.special === "text") {
       if (onActivateTextDrawing) onActivateTextDrawing();
       setSelectedTool("text");
-      if (onToolSelect) onToolSelect("text"); // expand properties panel
+      // Do NOT expand properties panel — it opens after the text box is drawn
       return;
     }
 

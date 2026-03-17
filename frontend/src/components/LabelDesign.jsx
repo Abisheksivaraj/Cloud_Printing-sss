@@ -70,7 +70,7 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
     setIsDrawingLine(false);
     setSelectedElementId(null);
     setSelectedTool(null);
-    setIsPropertiesExpanded(true);
+    setIsPropertiesExpanded(false);
   };
 
   // ─── Activate barcode drawing ───────────────────────────────────────────
@@ -82,7 +82,7 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
     setIsDrawingLine(false);
     setSelectedElementId(null);
     setSelectedTool(null);
-    setIsPropertiesExpanded(true);
+    setIsPropertiesExpanded(false);
   };
 
   // ─── Activate shape drawing ─────────────────────────────────────────────
@@ -92,7 +92,7 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
     setIsDrawingBarcode(false);
     setIsDrawingLine(false);
     setSelectedElementId(null);
-    setIsPropertiesExpanded(true);
+    setIsPropertiesExpanded(false);
   };
 
   // ─── Save ───────────────────────────────────────────────────────────────
@@ -243,15 +243,18 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
       const dataUrl = ev.target.result;
       const img = new Image();
       img.onload = () => {
-        const maxW = 200;
+        const MM_TO_PX = 3.7795275591;
+        const canvasW = (labelSize?.width || 100) * MM_TO_PX;
+        const canvasH = (labelSize?.height || 80) * MM_TO_PX;
+        const maxW = 100; // medium size
         const ratio = img.height / img.width;
         const w = Math.min(maxW, img.width);
         const h = Math.round(w * ratio);
         const element = {
           id: generateId(),
           type: "image",
-          x: 50,
-          y: 50,
+          x: Math.max(0, (canvasW - w) / 2),
+          y: Math.max(0, (canvasH - h) / 2),
           width: w,
           height: h,
           src: dataUrl,
@@ -268,7 +271,7 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
     };
     reader.readAsDataURL(file);
     e.target.value = ""; // reset so same file can be reuploaded
-  }, [elements.length]);
+  }, [elements.length, labelSize]);
 
   // ─── Placeholder ─────────────────────────────────────────────────────────
   const handleAddPlaceholder = (placeholderName) => {
@@ -399,9 +402,15 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
       {!isOperator && (
         <ToolsPalette
           onAddElement={addElement}
-          onActivateLineDrawing={activateLineDrawing}
+          onActivateLineDrawing={() => {
+            activateLineDrawing();
+            setIsPropertiesExpanded(false);
+          }}
           isDrawingLine={isDrawingLine}
-          onActivateTextDrawing={activateTextDrawing}
+          onActivateTextDrawing={() => {
+            activateTextDrawing();
+            setIsPropertiesExpanded(false);
+          }}
           isDrawingText={isDrawingText}
           onDragStart={(type) => canvasRef.current?.setDraggedElement(type)}
           onToolSelect={(tool) => {
@@ -410,13 +419,11 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
           }}
           onActivateBarcodeDrawing={(type) => {
             activateBarcodeDrawing(type);
-            setIsPropertiesExpanded(true);
           }}
           isDrawingBarcode={isDrawingBarcode}
           selectedBarcodeType={selectedBarcodeType}
           onActivateShapeDrawing={(type) => {
             activateShapeDrawing(type);
-            setIsPropertiesExpanded(true);
           }}
           isDrawingShape={isDrawingShape}
           currentShapeType={currentShapeType}
@@ -584,8 +591,8 @@ const LabelDesigner = ({ label, labels = [], user, onSave, onSelectLabel, onCrea
             setIsPropertiesExpanded(false);
           }}
           onElementCreated={() => {
-            // Open properties panel after an element is drawn (e.g. after line is placed)
-            if (!isOperator) setIsPropertiesExpanded(true);
+            // Do NOT open properties panel after element is created
+            // Panel only opens when user explicitly clicks an element
           }}
           onElementSelected={() => {
             // Open properties panel when an element is clicked/selected
