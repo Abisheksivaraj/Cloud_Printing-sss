@@ -9,6 +9,275 @@ import React, {
 import BarcodeElement from "../components/designer/code";
 import { useTheme } from "../ThemeContext";
 
+const SHAPE_TYPES = [
+  "rectangle", "rounded-rectangle", "circle", "ellipse", "triangle", "right-triangle", 
+  "parallelogram", "trapezoid", "diamond", "pentagon", "hexagon", "octagon", 
+  "cross", "heart", "moon", "arrow-left", "arrow-right", "arrow-up", "arrow-down", 
+  "arrow-left-right", "arrow-up-down", "star-4", "star-5", "star-6", "star-8", 
+  "arc", "double-arc", "wave",
+  "arrow-up-left", "arrow-up-right", "arrow-down-left", "arrow-down-right",
+  "line-arrow-left", "line-arrow-right", "line-arrow-up", "line-arrow-down", 
+  "line-arrow-h", "line-arrow-v", "dot"
+];
+
+const isShapeElement = (type) => SHAPE_TYPES.includes(type);
+
+const renderShapeContent = (element) => {
+  const fill = element.backgroundColor || "transparent";
+  const stroke = element.borderColor || "#000000";
+  const strokeWidth = element.borderWidth !== undefined ? element.borderWidth : 2;
+  const strokeDash = element.borderStyle === "dashed" ? "5,5" : element.borderStyle === "dotted" ? "2,2" : "none";
+  const borderRadius = element.borderRadius || 15;
+
+  const svgStyle = {
+    width: "100%",
+    height: "100%",
+    display: "block",
+  };
+
+  const commonProps = {
+    fill,
+    stroke,
+    strokeWidth,
+    strokeDasharray: strokeDash,
+    style: { vectorEffect: "non-scaling-stroke" },
+  };
+
+  switch (element.type) {
+    case "rectangle":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <rect x={strokeWidth / 2} y={strokeWidth / 2} width={100 - strokeWidth} height={100 - strokeWidth} {...commonProps} />
+        </svg>
+      );
+    case "rounded-rectangle":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <rect x={strokeWidth / 2} y={strokeWidth / 2} width={100 - strokeWidth} height={100 - strokeWidth} rx={borderRadius} ry={borderRadius} {...commonProps} />
+        </svg>
+      );
+    case "circle":
+    case "ellipse":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <ellipse cx="50" cy="50" rx={50 - strokeWidth / 2} ry={50 - strokeWidth / 2} {...commonProps} />
+        </svg>
+      );
+    case "dot":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+          <circle cx="50" cy="50" r={48 - strokeWidth / 2} fill={fill === 'transparent' ? stroke : fill} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={strokeDash} />
+        </svg>
+      );
+    case "triangle":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 98,98 2,98" {...commonProps} />
+        </svg>
+      );
+    case "right-triangle":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="2,2 2,98 98,98" {...commonProps} />
+        </svg>
+      );
+    case "parallelogram":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="25,2 98,2 75,98 2,98" {...commonProps} />
+        </svg>
+      );
+    case "trapezoid":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="20,2 80,2 98,98 2,98" {...commonProps} />
+        </svg>
+      );
+    case "diamond":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 98,50 50,98 2,50" {...commonProps} />
+        </svg>
+      );
+    case "pentagon":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 98,38 80,98 20,98 2,38" {...commonProps} />
+        </svg>
+      );
+    case "hexagon":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 98,25 98,75 50,98 2,75 2,25" {...commonProps} />
+        </svg>
+      );
+    case "octagon":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="30,2 70,2 98,30 98,70 70,98 30,98 2,70 2,30" {...commonProps} />
+        </svg>
+      );
+    case "cross":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="35,2 65,2 65,35 98,35 98,65 65,65 65,98 35,98 35,65 2,65 2,35 35,35" {...commonProps} />
+        </svg>
+      );
+    case "heart":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 50,25 C 40,5 15,5 5,25 C -5,45 20,75 50,98 C 80,75 105,45 95,25 C 85,5 60,5 50,25 Z" {...commonProps} />
+        </svg>
+      );
+    case "moon":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 80,10 A 40,40 0 1,0 80,90 A 30,30 0 1,1 80,10 Z" {...commonProps} />
+        </svg>
+      );
+    case "arrow-right":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="2,30 60,30 60,10 98,50 60,90 60,70 2,70" {...commonProps} />
+        </svg>
+      );
+    case "arrow-left":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="98,30 40,30 40,10 2,50 40,90 40,70 98,70" {...commonProps} />
+        </svg>
+      );
+    case "arrow-up":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="30,98 30,40 10,40 50,2 90,40 70,40 70,98" {...commonProps} />
+        </svg>
+      );
+    case "arrow-down":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="30,2 30,60 10,60 50,98 90,60 70,60 70,2" {...commonProps} />
+        </svg>
+      );
+    case "arrow-left-right":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="2,50 25,20 25,35 75,35 75,20 98,50 75,80 75,65 25,65 25,80" {...commonProps} />
+        </svg>
+      );
+    case "arrow-up-down":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 20,25 35,25 35,75 20,75 50,98 80,75 65,75 65,25 80,25" {...commonProps} />
+        </svg>
+      );
+    case "line-arrow-right":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 10,50 L 90,50 M 70,30 L 90,50 L 70,70" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "line-arrow-left":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 90,50 L 10,50 M 30,30 L 10,50 L 30,70" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "line-arrow-up":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 50,90 L 50,10 M 30,30 L 50,10 L 70,30" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "line-arrow-down":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 50,10 L 50,90 M 30,70 L 50,90 L 70,70" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "line-arrow-h":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 10,50 L 90,50 M 30,30 L 10,50 L 30,70 M 70,30 L 90,50 L 70,70" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "line-arrow-v":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 50,10 L 50,90 M 30,30 L 50,10 L 70,30 M 30,70 L 50,90 L 70,70" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "arrow-up-left":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 85,85 L 15,15 M 45,15 L 15,15 L 15,45" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "arrow-up-right":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 15,85 L 85,15 M 55,15 L 85,15 L 85,45" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "arrow-down-left":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 85,15 L 15,85 M 15,55 L 15,85 L 45,85" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "arrow-down-right":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 15,15 L 85,85 M 55,85 L 85,85 L 85,55" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "star-4":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 62,38 98,50 62,62 50,98 38,62 2,50 38,38" {...commonProps} />
+        </svg>
+      );
+    case "star-5":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 65,35 98,35 72,57 82,90 50,70 18,90 28,57 2,35 35,35" {...commonProps} />
+        </svg>
+      );
+    case "star-6":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 63,28 95,28 75,50 95,72 63,72 50,98 37,72 5,72 25,50 5,28 37,28" {...commonProps} />
+        </svg>
+      );
+    case "star-8":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon points="50,2 60,35 85,15 65,40 98,50 65,60 85,85 60,65 50,98 40,65 15,85 35,60 2,50 35,40 15,15 40,35" {...commonProps} />
+        </svg>
+      );
+    case "arc":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 10,90 A 40,40 0 0,1 90,90" {...commonProps} fill="none" />
+        </svg>
+      );
+    case "double-arc":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 10,90 A 40,40 0 0,1 90,90 L 90,75 A 25,25 0 0,0 10,75 Z" {...commonProps} />
+        </svg>
+      );
+    case "wave":
+      return (
+        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M 2,20 C 30,5 70,35 98,20 L 98,80 C 70,95 30,65 2,80 Z" {...commonProps} />
+        </svg>
+      );
+    default:
+      return null;
+  }
+};
+
 const DesignCanvas = forwardRef(
   (
     {
@@ -241,23 +510,38 @@ const DesignCanvas = forwardRef(
       return () => window.removeEventListener("resize", handleResize);
     }, [fitCanvasToScreen]);
 
-    useEffect(() => {
-      const handleScroll = () => {
-        if (scrollContainerRef.current) {
-          setScrollOffset({
-            x: scrollContainerRef.current.scrollLeft,
-            y: scrollContainerRef.current.scrollTop,
-          });
-        }
-      };
-
-      const scrollContainer = scrollContainerRef.current;
-      if (scrollContainer) {
-        scrollContainer.addEventListener("scroll", handleScroll);
-        return () =>
-          scrollContainer.removeEventListener("scroll", handleScroll);
+    const updateScrollOffset = useCallback(() => {
+      if (scrollContainerRef.current && canvasRef.current) {
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        
+        // Positive value means canvas origin is visually shifted right/down inside the container.
+        setScrollOffset({
+          x: canvasRect.left - containerRect.left,
+          y: canvasRect.top - containerRect.top,
+        });
       }
     }, []);
+
+    useEffect(() => {
+      const scrollContainer = scrollContainerRef.current;
+      if (scrollContainer) {
+        scrollContainer.addEventListener("scroll", updateScrollOffset);
+        window.addEventListener("resize", updateScrollOffset);
+        
+        // Initial setup
+        setTimeout(updateScrollOffset, 50);
+        
+        return () => {
+          scrollContainer.removeEventListener("scroll", updateScrollOffset);
+          window.removeEventListener("resize", updateScrollOffset);
+        };
+      }
+    }, [updateScrollOffset]);
+
+    useEffect(() => {
+      updateScrollOffset();
+    }, [displayZoom, getCanvasPixelSize().width, getCanvasPixelSize().height, updateScrollOffset]);
 
     useImperativeHandle(ref, () => ({
       handleUndo,
@@ -271,6 +555,7 @@ const DesignCanvas = forwardRef(
       canUndo: historyIndex > 0,
       canRedo: historyIndex < history.length - 1,
       setDraggedElement,
+      saveToHistory,
     }));
 
     useEffect(() => {
@@ -1472,6 +1757,7 @@ const DesignCanvas = forwardRef(
           );
         }
 
+        const isShape = isShapeElement(element.type);
         const style = {
           position: "absolute",
           left: element.x,
@@ -1482,42 +1768,28 @@ const DesignCanvas = forwardRef(
           zIndex: element.zIndex || 0,
           cursor: isDragging
             ? "grabbing"
-            : isDrawingLine || isDrawingBarcode || isDrawingShape
+            : isDrawingLine || isDrawingBarcode || isDrawingShape || isDrawingText
               ? "crosshair"
               : "move",
           border:
-            isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape
+            isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape && !isDrawingText
               ? "2px solid var(--color-primary)"
-              : element.type === "barcode"
-                ? "none"
-                : "1px solid transparent",
+              : !isShape && element.borderWidth > 0
+                ? `${element.borderWidth}px ${element.borderStyle || "solid"} ${element.borderColor || "#000000"}`
+                : "none",
           fontSize: element.fontSize,
           fontFamily: element.fontFamily,
           fontWeight: element.fontWeight,
           fontStyle: element.fontStyle,
           textAlign: element.textAlign,
           color: element.color,
-          backgroundColor: element.backgroundColor,
-          borderWidth:
-            !isSelected && element.borderWidth > 0
-              ? element.borderWidth
-              : undefined,
-          borderColor:
-            !isSelected && element.borderWidth > 0
-              ? element.borderColor
-              : undefined,
-          borderStyle:
-            !isSelected && element.borderWidth > 0
-              ? element.borderStyle || "solid"
-              : undefined,
-          borderRadius: element.borderRadius
+          backgroundColor: isShape ? "transparent" : element.backgroundColor,
+          borderRadius: !isShape && element.borderRadius
             ? `${element.borderRadius}px`
-            : element.type === "circle"
-              ? "50%"
-              : undefined,
+            : undefined,
           userSelect: "none",
           pointerEvents:
-            isDrawingLine || isDrawingBarcode || isDrawingShape
+            isDrawingLine || isDrawingBarcode || isDrawingShape || isDrawingText
               ? "none"
               : element.pointerEvents || "auto",
           padding: element.type === "text" ? "0 4px" : "0",
@@ -1570,11 +1842,13 @@ const DesignCanvas = forwardRef(
                 key={element.id}
                 style={{
                   ...style,
-                  border: isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape
+                  border: isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape && !isDrawingText
                     ? editingElementId === element.id
-                      ? '1.5px solid #1a73e8'
-                      : '1.5px dashed #1a73e8'
-                    : '1px dashed rgba(0,0,0,0.35)',
+                      ? '2px solid var(--color-primary)'
+                      : '2px dashed var(--color-primary)'
+                    : element.borderWidth > 0
+                      ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
+                      : 'none',
                   boxShadow: 'none',
                   fontWeight: element.fontWeight || "normal",
                   fontStyle: element.fontStyle || "normal",
@@ -1641,8 +1915,10 @@ const DesignCanvas = forwardRef(
                         width: '100%',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: (element.lineHeight || 1) > 1.4 ? 'pre-wrap' : 'nowrap',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
                         pointerEvents: 'none',
+                        textAlignLast: element.textAlign === 'justify' ? 'justify' : 'auto',
                       }}
                     >
                       {element.content || (
@@ -1790,14 +2066,52 @@ const DesignCanvas = forwardRef(
               </div>
             );
           case "rectangle":
+          case "rounded-rectangle":
           case "circle":
+          case "ellipse":
+          case "triangle":
+          case "right-triangle":
+          case "parallelogram":
+          case "trapezoid":
+          case "diamond":
+          case "pentagon":
+          case "hexagon":
+          case "octagon":
+          case "cross":
+          case "heart":
+          case "moon":
+          case "arrow-left":
+          case "arrow-right":
+          case "arrow-up":
+          case "arrow-down":
+          case "arrow-left-right":
+          case "arrow-up-down":
+          case "star-4":
+          case "star-5":
+          case "star-6":
+          case "star-8":
+          case "arc":
+          case "double-arc":
+          case "wave":
+          case "arrow-up-left":
+          case "arrow-up-right":
+          case "arrow-down-left":
+          case "arrow-down-right":
+          case "line-arrow-left":
+          case "line-arrow-right":
+          case "line-arrow-up":
+          case "line-arrow-down":
+          case "line-arrow-h":
+          case "line-arrow-v":
+          case "dot":
             return (
               <div
                 key={element.id}
                 style={style}
                 onMouseDown={(e) => handleElementMouseDown(e, element)}
-                className="select-none"
+                className="select-none overflow-visible"
               >
+                {renderShapeContent(element)}
                 {renderResizeHandles(element)}
               </div>
             );
@@ -1946,12 +2260,12 @@ const DesignCanvas = forwardRef(
           </div>
 
           <div className="flex-1 overflow-hidden relative">
-            <div
-              style={{
-                width: `${maxRulerLength}px`,
-                marginLeft: `-${scrollOffset.x}px`,
-              }}
-            >
+              <div
+                style={{
+                  width: `${maxRulerLength}px`,
+                  marginLeft: `${scrollOffset.x}px`,
+                }}
+              >
               <Ruler orientation="horizontal" maxLength={maxRulerLength} />
             </div>
           </div>
@@ -1962,7 +2276,7 @@ const DesignCanvas = forwardRef(
             <div
               style={{
                 height: `${maxRulerHeightLength}px`,
-                marginTop: `-${scrollOffset.y}px`,
+                marginTop: `${scrollOffset.y}px`,
               }}
             >
               <Ruler orientation="vertical" maxLength={maxRulerHeightLength} />
@@ -2143,37 +2457,36 @@ const DesignCanvas = forwardRef(
                         width: tempBarcode.width,
                         height: tempBarcode.height,
                         border: "2px dashed var(--color-primary)",
-                        backgroundColor: "rgba(59, 130, 246, 0.1)", // Blue hint
+                        backgroundColor: "rgba(255, 255, 255, 0.9)",
                         pointerEvents: "none",
                         display: "flex",
-                        flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "4px",
+                        overflow: "hidden",
                       }}
                     >
-                      <span className="text-xs font-bold text-[var(--color-primary)] bg-white/80 px-2 py-0.5 rounded shadow-sm">
-                        {(() => {
-                          const barcodeTypeNames = {
-                            CODE128: "Code 128",
-                            CODE39: "Code 39",
-                            EAN13: "EAN-13",
-                            EAN8: "EAN-8",
-                            UPC: "UPC-A",
-                            QR: "QR Code",
-                            DATAMATRIX: "Data Matrix",
-                            PDF417: "PDF417",
-                            AZTEC: "Aztec Code",
-                          };
-                          return (
-                            barcodeTypeNames[selectedBarcodeType] || "Barcode"
-                          );
-                        })()}
-                      </span>
-                      <span className="text-[10px] text-[var(--color-primary)] font-medium bg-white/80 px-1 rounded">
-                        {Math.round(tempBarcode.width / MM_TO_PX)} ×{" "}
-                        {Math.round(tempBarcode.height / MM_TO_PX)}mm
-                      </span>
+                      <BarcodeElement
+                        element={{
+                          type: "barcode",
+                          width: tempBarcode.width,
+                          height: tempBarcode.height,
+                          content: "123456789",
+                          barcodeType: selectedBarcodeType || "CODE128",
+                          color: "#000000",
+                          backgroundColor: "#ffffff",
+                          fontSize: 14,
+                        }}
+                      />
+                      <div style={{
+                        position: "absolute",
+                        bottom: 4,
+                        right: 4,
+                        pointerEvents: "none",
+                      }}>
+                        <span className="text-[9px] text-[var(--color-primary)] font-black bg-white/95 border border-blue-200 px-1 py-0.5 rounded shadow-sm">
+                          {Math.round(tempBarcode.width / MM_TO_PX)} × {Math.round(tempBarcode.height / MM_TO_PX)}mm
+                        </span>
+                      </div>
                     </div>
                   )}
 
@@ -2185,20 +2498,32 @@ const DesignCanvas = forwardRef(
                       top: tempShape.y,
                       width: tempShape.width,
                       height: tempShape.height,
-                      border: "2px dashed #9333ea",
-                      backgroundColor: "rgba(147, 51, 234, 0.1)",
-                      borderRadius: tempShape.type === "circle" ? "50%" : "0",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {renderShapeContent({
+                      ...tempShape,
+                      backgroundColor: "rgba(147, 51, 234, 0.15)",
+                      borderColor: "#9333ea",
+                      borderWidth: 2,
+                      borderStyle: "dashed",
+                    })}
+                    <div style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
                       pointerEvents: "none",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                    }}
-                  >
-                    <span className="text-[10px] text-purple-600 font-semibold bg-white/80 px-2 py-1 rounded shadow-sm">
-                      {tempShape.type === "rectangle" ? "Rectangle" : "Circle"}:{" "}
-                      {Math.round(tempShape.width / MM_TO_PX)} ×{" "}
-                      {Math.round(tempShape.height / MM_TO_PX)}mm
-                    </span>
+                    }}>
+                      <span className="text-[10px] text-purple-600 font-semibold bg-white/90 px-1.5 py-0.5 rounded shadow-sm border border-purple-200 whitespace-nowrap">
+                        {tempShape.type.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}:{" "}
+                        {Math.round(tempShape.width / MM_TO_PX)} ×{" "}
+                        {Math.round(tempShape.height / MM_TO_PX)}mm
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -2217,11 +2542,28 @@ const DesignCanvas = forwardRef(
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      overflow: "hidden",
                     }}
                   >
-                    <span className="text-[10px] text-blue-600 font-semibold bg-white/80 px-2 py-1 rounded shadow-sm">
-                      T {Math.round(tempText.width / MM_TO_PX)} × {Math.round(tempText.height / MM_TO_PX)}mm
+                    <span style={{
+                      fontSize: 14,
+                      fontFamily: "Arial",
+                      color: "#1a73e8",
+                      opacity: 0.6,
+                      textAlign: "center",
+                    }}>
+                      Sample Text
                     </span>
+                    <div style={{
+                      position: "absolute",
+                      bottom: 2,
+                      right: 2,
+                      pointerEvents: "none",
+                    }}>
+                      <span className="text-[8px] text-blue-600 font-bold bg-white/95 border border-blue-200 px-1 rounded shadow-sm">
+                        {Math.round(tempText.width / MM_TO_PX)} × {Math.round(tempText.height / MM_TO_PX)}mm
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

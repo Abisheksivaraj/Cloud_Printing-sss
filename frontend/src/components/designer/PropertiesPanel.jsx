@@ -32,6 +32,7 @@ const PropertiesPanel = ({
   setSelectedBarcodeType,
   onBringForward,
   onSendBackward,
+  onAlign,
 }) => {
   const { theme, isDarkMode } = useTheme();
   const [tableRows, setTableRows] = useState(2);
@@ -53,7 +54,32 @@ const PropertiesPanel = ({
   const shapeTypes = [
     { value: "", label: "Select Shape..." },
     { value: "rectangle", label: "Rectangle" },
-    { value: "circle", label: "Circle" },
+    { value: "rounded-rectangle", label: "Rounded Rectangle" },
+    { value: "circle", label: "Oval/Circle" },
+    { value: "triangle", label: "Triangle" },
+    { value: "right-triangle", label: "Right Triangle" },
+    { value: "parallelogram", label: "Parallelogram" },
+    { value: "trapezoid", label: "Trapezoid" },
+    { value: "diamond", label: "Diamond" },
+    { value: "pentagon", label: "Pentagon" },
+    { value: "hexagon", label: "Hexagon" },
+    { value: "octagon", label: "Octagon" },
+    { value: "cross", label: "Cross" },
+    { value: "heart", label: "Heart" },
+    { value: "moon", label: "Moon" },
+    { value: "arrow-left", label: "Left Arrow" },
+    { value: "arrow-right", label: "Right Arrow" },
+    { value: "arrow-up", label: "Up Arrow" },
+    { value: "arrow-down", label: "Down Arrow" },
+    { value: "arrow-left-right", label: "Left-Right Arrow" },
+    { value: "arrow-up-down", label: "Up-Down Arrow" },
+    { value: "star-4", label: "4-Point Star" },
+    { value: "star-5", label: "5-Point Star" },
+    { value: "star-6", label: "6-Point Star" },
+    { value: "star-8", label: "8-Point Star" },
+    { value: "arc", label: "Arc" },
+    { value: "double-arc", label: "Double Arc" },
+    { value: "wave", label: "Wave Banner" },
   ];
 
   const fontFamilies = [
@@ -100,7 +126,8 @@ const PropertiesPanel = ({
     </label>
   );
 
-  const NumInput = ({ label, value, onChange, min = 0, max, step = 1 }) => (
+
+  const NumInput = ({ label, value, onChange, min, max, step = 1 }) => (
     <div>
       <Label>{label}</Label>
       <input
@@ -110,7 +137,7 @@ const PropertiesPanel = ({
         min={min}
         max={max}
         step={step}
-        className="input text-xs py-1.5 w-full"
+        className="input text-xs py-1.5 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
     </div>
   );
@@ -288,11 +315,11 @@ const PropertiesPanel = ({
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
                 <Label>Rows</Label>
-                <input type="number" value={tableRows} onChange={(e) => setTableRows(Number(e.target.value))} min="1" max="20" className="input text-sm py-1" />
+                <input type="number" value={tableRows} onChange={(e) => setTableRows(Number(e.target.value))} min="1" max="20" className="input text-sm py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
               </div>
               <div>
                 <Label>Cols</Label>
-                <input type="number" value={tableColumns} onChange={(e) => setTableColumns(Number(e.target.value))} min="1" max="20" className="input text-sm py-1" />
+                <input type="number" value={tableColumns} onChange={(e) => setTableColumns(Number(e.target.value))} min="1" max="20" className="input text-sm py-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
               </div>
             </div>
             <button
@@ -311,7 +338,7 @@ const PropertiesPanel = ({
             {/* Element Header */}
             <div className="flex items-center justify-between pb-3 border-b" style={{ borderColor: theme.border }}>
               <div>
-                <h4 className="font-black text-sm capitalize flex items-center gap-2" style={{ color: theme.text }}>
+                <h4 className="font-black text-sm flex items-center gap-2" style={{ color: theme.text }}>
                   {el.type === 'text' && <FileText size={15} className="text-blue-500" />}
                   {el.type === 'image' && <ImageIcon size={15} className="text-green-500" />}
                   {el.type === 'barcode' && <span className="text-sm">📊</span>}
@@ -320,7 +347,7 @@ const PropertiesPanel = ({
                   {el.type === 'line' && <span className="text-sm">╱</span>}
                   {el.type === 'table' && <span className="text-sm">⊞</span>}
                   {el.type === 'placeholder' && <span className="text-sm">📦</span>}
-                  {el.type}
+                  {el.type.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                 </h4>
                 <p className="text-[9px] text-gray-400 font-mono mt-0.5">#{id?.slice(-8)}</p>
               </div>
@@ -356,6 +383,63 @@ const PropertiesPanel = ({
               </div>
             </div>
 
+            {/* Object Alignment Control */}
+            <div className="rounded-lg p-3 border space-y-2.5" style={{ borderColor: theme.border }}>
+              <SectionHeader>Align Object</SectionHeader>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  onClick={() => onAlign && onAlign("left")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Left"
+                >
+                  Left
+                </button>
+                <button
+                  onClick={() => onAlign && onAlign("center")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Center"
+                >
+                  Center
+                </button>
+                <button
+                  onClick={() => onAlign && onAlign("right")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Right"
+                >
+                  Right
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  onClick={() => onAlign && onAlign("top")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Top"
+                >
+                  Top
+                </button>
+                <button
+                  onClick={() => onAlign && onAlign("middle")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Middle"
+                >
+                  Middle
+                </button>
+                <button
+                  onClick={() => onAlign && onAlign("bottom")}
+                  className="py-1 rounded border text-[9px] font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors uppercase tracking-wider"
+                  style={{ borderColor: theme.border, color: theme.text }}
+                  title="Align Bottom"
+                >
+                  Bottom
+                </button>
+              </div>
+            </div>
+
             {/* Position & Size */}
             <div className="rounded-lg p-3 border space-y-3" style={{ borderColor: theme.border }}>
               <SectionHeader>Position & Size</SectionHeader>
@@ -364,34 +448,20 @@ const PropertiesPanel = ({
                 <NumInput label="Y (px)" value={Math.round(el.y)} onChange={(v) => updateElement(id, { y: v })} />
                 {el.type !== 'line' && (
                   <>
-                    <NumInput label="Width (px)" value={Math.round(el.width)} onChange={(v) => updateElement(id, { width: Math.max(10, v) })} min={10} />
-                    <NumInput label="Height (px)" value={Math.round(el.height)} onChange={(v) => updateElement(id, { height: Math.max(10, v) })} min={10} />
+                    <NumInput label="Width (px)" value={Math.round(el.width)} onChange={(v) => updateElement(id, { width: v })} />
+                    <NumInput label="Height (px)" value={Math.round(el.height)} onChange={(v) => updateElement(id, { height: v })} />
                   </>
                 )}
               </div>
               {/* Rotation */}
               {el.type !== 'line' && (
-                <div>
-                  <Label>Rotation (°)</Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min={-180}
-                      max={180}
-                      value={el.rotation || 0}
-                      onChange={(e) => updateElement(id, { rotation: Number(e.target.value) })}
-                      className="flex-1 h-1.5 accent-[var(--color-primary)]"
-                    />
-                    <input
-                      type="number"
-                      value={el.rotation || 0}
-                      onChange={(e) => updateElement(id, { rotation: Number(e.target.value) })}
-                      min={-180}
-                      max={180}
-                      className="input text-xs py-1 w-16 text-center"
-                    />
-                  </div>
-                </div>
+                <NumInput
+                  label="Rotation (°)"
+                  value={el.rotation || 0}
+                  onChange={(v) => updateElement(id, { rotation: v })}
+                  min={-180}
+                  max={180}
+                />
               )}
             </div>
 
@@ -402,11 +472,16 @@ const PropertiesPanel = ({
                 <textarea
                   value={el.content || ""}
                   onChange={(e) => updateElement(id, { content: e.target.value })}
-                  className="input min-h-[70px] text-sm resize-none"
-                  placeholder="Enter content..."
+                  className="input min-h-[70px] text-sm resize-vertical"
+                  placeholder="Enter content... (press Enter for new line)"
                 />
+                {el.type === 'text' && (
+                  <p className="text-[9px] text-gray-400 italic">💡 Double-click text on canvas to edit inline. Press Enter for new lines.</p>
+                )}
               </div>
             )}
+
+
 
             {/* ── TEXT TYPOGRAPHY ── */}
             {(['text', 'placeholder'].includes(el.type)) && (
@@ -427,7 +502,7 @@ const PropertiesPanel = ({
 
                 {/* Size + Color row */}
                 <div className="grid grid-cols-2 gap-2">
-                  <NumInput label="Font Size (pt)" value={el.fontSize || 14} onChange={(v) => updateElement(id, { fontSize: Math.max(6, v) })} min={6} max={200} />
+                  <NumInput label="Font Size (pt)" value={el.fontSize || 14} onChange={(v) => updateElement(id, { fontSize: v })} max={200} />
                   <ColorPicker label="Text Color" value={el.color || "#000000"} onChange={(v) => updateElement(id, { color: v })} />
                 </div>
 

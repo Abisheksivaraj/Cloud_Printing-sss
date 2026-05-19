@@ -7,7 +7,7 @@ const User = require('../src/Models/User');
 const createSuperAdmin = async () => {
     try {
         // Assume default mongodb url if env is missing
-        const dbUrl = process.env.DB_CONNECTION_STRING || "mongodb://localhost:27017/cloud_printing";
+        const dbUrl = process.env.MONGO_URI || process.env.DB_CONNECTION_STRING || "mongodb://localhost:27017/cloud_printing";
         await mongoose.connect(dbUrl);
         console.log("Connected to MongoDB.");
 
