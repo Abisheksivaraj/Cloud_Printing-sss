@@ -59,7 +59,7 @@ const CreateLabelModal = ({ onClose, onCreate }) => {
   const fetchAvailablePrinters = async () => {
     setIsLoadingPrinters(true);
     try {
-      const response = await fetch("http://localhost:3001/api/printers");
+      const response = await fetch("https://cloud-printing-sss.onrender.com/api/printers");
       if (response.ok) {
         const data = await response.json();
         setAvailablePrinters(data.printers || []);

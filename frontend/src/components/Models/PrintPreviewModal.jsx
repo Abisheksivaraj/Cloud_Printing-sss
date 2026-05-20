@@ -322,90 +322,49 @@ const PrintPreviewModal = ({ label, onClose }) => {
     1,
   );
 
-  const handlePrint = async () => {
+ const handlePrint = async () => {
+  try {
+    // Step 1: Check printer connectivity
+    let printerName = "System Default";
+    let printerConnected = false;
+    let printerError = null;
+
     try {
-      // Step 1: Check printer connectivity
-      let printerName = "System Default";
-      let printerConnected = false;
-      let printerError = null;
-
-      try {
-        const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
-        if (printersData.printers?.length > 0) {
-          const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
-          printerName = defaultPrinter.name;
-
-          // Check specific printer status
-          try {
-            const statusData = await apiCall(API_ENDPOINTS.PRINTER_STATUS(printerName));
-            printerConnected = statusData.isConnected;
-            if (!printerConnected) {
-              printerError = `Printer "${printerName}" is offline or disconnected`;
-            }
-          } catch (statusErr) {
-            printerError = `Unable to check status of printer "${printerName}": ${statusErr.message}`;
-          }
-        } else {
-          printerError = "No printers found. Please connect a printer and try again.";
-        }
-      } catch (e) {
-        printerError = `Could not fetch printers: ${e.message}`;
-      }
-
-      // Calculate print metrics
-      const printedLengthMm = (sheetHeight / MM_TO_PX).toFixed(1);
-      const labelName = label.name || "Unnamed Label";
-
-      // Step 2: If printer not connected, create a FAILED job with error details
-      if (printerError) {
-        const errorLog = [{
-          labelIndex: 0,
-          labelName: labelName,
-          errorType: "printer_disconnected",
-          message: printerError,
-          severity: "critical",
-          timestamp: new Date().toISOString(),
-        }];
-
-        const jobData = {
-          printerName,
-          documentName: labelName,
-          templateId: label._id || label.id,
-          documentType: "label",
-          copies: cols * rows,
-          priority: "normal",
-          status: "failed",
-          totalRecords: 1,
-          printedRecords: 0,
-          printedLength: 0,
-          errorMessage: printerError,
-          errorLog,
-          errorDetails: {
-            category: "printer_disconnected",
-            printerState: "disconnected",
-            totalErrors: 1,
-            firstErrorAt: new Date().toISOString(),
-            lastErrorAt: new Date().toISOString(),
-          },
-          metadata: {
-            labelWidth: labelSize.width,
-            labelHeight: labelSize.height,
-            cols,
-            rows,
-          },
-        };
+      const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
+      if (printersData.printers?.length > 0) {
+        const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
+        printerName = defaultPrinter.name;
 
         try {
-          await printService.createJob(jobData);
-        } catch (saveErr) {
-          console.error("Failed to save error to history:", saveErr);
+          const statusData = await apiCall(API_ENDPOINTS.PRINTER_STATUS(printerName));
+          printerConnected = statusData.isConnected;
+          if (!printerConnected) {
+            printerError = `Printer "${printerName}" is offline or disconnected`;
+          }
+        } catch (statusErr) {
+          printerError = `Unable to check status of printer "${printerName}": ${statusErr.message}`;
         }
-
-        alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
-        return;
+      } else {
+        printerError = "No printers found. Please connect a printer and try again.";
       }
+    } catch (e) {
+      printerError = `Could not fetch printers: ${e.message}`;
+    }
 
-      // Step 3: Printer is connected - create print job and print
+    const printedLengthMm = (sheetHeight / MM_TO_PX).toFixed(1);
+    const labelName = label.name || "Unnamed Label";
+
+    // Step 2: If printer not connected, log failed job
+    if (printerError) {
+      const errorLog = [{
+        labelIndex: 0,
+        labelName,
+        errorType: "printer_disconnected",
+        message: printerError,
+        severity: "critical",
+        timestamp: new Date().toISOString(),
+      }];
+
       const jobData = {
         printerName,
         documentName: labelName,
@@ -413,10 +372,19 @@ const PrintPreviewModal = ({ label, onClose }) => {
         documentType: "label",
         copies: cols * rows,
         priority: "normal",
-        status: "printing",
+        status: "failed",
         totalRecords: 1,
         printedRecords: 0,
-        printedLength: parseFloat(printedLengthMm),
+        printedLength: 0,
+        errorMessage: printerError,
+        errorLog,
+        errorDetails: {
+          category: "printer_disconnected",
+          printerState: "disconnected",
+          totalErrors: 1,
+          firstErrorAt: new Date().toISOString(),
+          lastErrorAt: new Date().toISOString(),
+        },
         metadata: {
           labelWidth: labelSize.width,
           labelHeight: labelSize.height,
@@ -425,82 +393,178 @@ const PrintPreviewModal = ({ label, onClose }) => {
         },
       };
 
-      const { job } = await printService.createJob(jobData);
-
-      // Use afterprint event to detect if print was completed or cancelled
-      const printPromise = new Promise((resolve) => {
-        const handleAfterPrint = () => {
-          window.removeEventListener('afterprint', handleAfterPrint);
-          resolve();
-        };
-        window.addEventListener('afterprint', handleAfterPrint);
-
-        // Trigger browser print
-        window.print();
-      });
-
-      await printPromise;
-
-      // Update status to completed
       try {
-        await printService.updateStatus(job._id, "completed", null, [{
-          labelIndex: 0,
-          labelName: labelName,
-          errorType: "unknown",
-          message: "Job successfully sent to system print spooler",
-          severity: "info",
-          timestamp: new Date().toISOString(),
-        }]);
-      } catch (updateErr) {
-        console.error("Failed to update job status:", updateErr);
-      }
-
-    } catch (error) {
-      console.error("Print failed:", error);
-
-      // Log the error to history
-      const errorLog = [{
-        labelIndex: 0,
-        labelName: label.name || "Unnamed Label",
-        errorType: "printer_error",
-        message: error.message || "An unexpected error occurred during printing",
-        severity: "error",
-        timestamp: new Date().toISOString(),
-      }];
-
-      try {
-        await printService.createJob({
-          printerName: "Unknown",
-          documentName: label.name || "Unnamed Label",
-          templateId: label._id || label.id,
-          documentType: "label",
-          copies: cols * rows,
-          status: "failed",
-          totalRecords: 1,
-          printedRecords: 0,
-          errorMessage: error.message || "Unexpected print error",
-          errorLog,
-          errorDetails: {
-            category: "printer_error",
-            printerState: "error",
-            totalErrors: 1,
-            firstErrorAt: new Date().toISOString(),
-            lastErrorAt: new Date().toISOString(),
-          },
-          metadata: {
-            labelWidth: labelSize.width,
-            labelHeight: labelSize.height,
-            cols,
-            rows,
-          },
-        });
+        await printService.createJob(jobData);
       } catch (saveErr) {
         console.error("Failed to save error to history:", saveErr);
       }
 
-      alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
+      alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
+      return;
     }
-  };
+
+    // Step 3: Printer connected - create job record
+    const jobData = {
+      printerName,
+      documentName: labelName,
+      templateId: label._id || label.id,
+      documentType: "label",
+      copies: cols * rows,
+      priority: "normal",
+      status: "printing",
+      totalRecords: 1,
+      printedRecords: 0,
+      printedLength: parseFloat(printedLengthMm),
+      metadata: {
+        labelWidth: labelSize.width,
+        labelHeight: labelSize.height,
+        cols,
+        rows,
+      },
+    };
+
+    const { job } = await printService.createJob(jobData);
+
+    // Step 4: Build print content from current rendered label grid
+    const labelW = labelSize.width * MM_TO_PX;
+    const labelH = labelSize.height * MM_TO_PX;
+    const labelHTML = document.querySelector('.print-grid')?.innerHTML || '';
+
+    // Step 5: Open new window with only label content
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+
+    if (!printWindow) {
+      alert("Pop-up blocked! Please allow pop-ups for this site and try again.");
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${labelName}</title>
+          <style>
+            @page {
+              size: ${labelSize.width}mm ${labelSize.height}mm;
+              margin: 0;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+            }
+            html, body {
+              width: ${labelSize.width}mm;
+              height: ${labelSize.height}mm;
+              overflow: hidden;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-grid {
+              display: grid;
+              grid-template-columns: repeat(${cols}, ${labelW}px);
+              grid-template-rows: repeat(${rows}, ${labelH}px);
+              column-gap: ${horizontalGap * MM_TO_PX}px;
+              row-gap: ${verticalGap * MM_TO_PX}px;
+              padding: ${margins.top * MM_TO_PX}px ${margins.right * MM_TO_PX}px ${margins.bottom * MM_TO_PX}px ${margins.left * MM_TO_PX}px;
+              width: ${labelSize.width}mm;
+              height: ${labelSize.height}mm;
+            }
+            .print-label {
+              overflow: hidden;
+              position: relative;
+              border: 1px solid #000;
+              width: ${labelW}px;
+              height: ${labelH}px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-grid">
+            ${labelHTML}
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Step 6: Print after content loads
+    await new Promise((resolve) => {
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+        resolve();
+      };
+      // Fallback if onload doesn't fire
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+        resolve();
+      }, 800);
+    });
+
+    // Step 7: Update job status to completed
+    try {
+      await printService.updateStatus(job._id, "completed", null, [{
+        labelIndex: 0,
+        labelName,
+        errorType: "unknown",
+        message: "Job successfully sent to system print spooler",
+        severity: "info",
+        timestamp: new Date().toISOString(),
+      }]);
+    } catch (updateErr) {
+      console.error("Failed to update job status:", updateErr);
+    }
+
+  } catch (error) {
+    console.error("Print failed:", error);
+
+    const errorLog = [{
+      labelIndex: 0,
+      labelName: label.name || "Unnamed Label",
+      errorType: "printer_error",
+      message: error.message || "An unexpected error occurred during printing",
+      severity: "error",
+      timestamp: new Date().toISOString(),
+    }];
+
+    try {
+      await printService.createJob({
+        printerName: "Unknown",
+        documentName: label.name || "Unnamed Label",
+        templateId: label._id || label.id,
+        documentType: "label",
+        copies: cols * rows,
+        status: "failed",
+        totalRecords: 1,
+        printedRecords: 0,
+        errorMessage: error.message || "Unexpected print error",
+        errorLog,
+        errorDetails: {
+          category: "printer_error",
+          printerState: "error",
+          totalErrors: 1,
+          firstErrorAt: new Date().toISOString(),
+          lastErrorAt: new Date().toISOString(),
+        },
+        metadata: {
+          labelWidth: labelSize.width,
+          labelHeight: labelSize.height,
+          cols,
+          rows,
+        },
+      });
+    } catch (saveErr) {
+      console.error("Failed to save error to history:", saveErr);
+    }
+
+    alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
+  }
+};
 
   return (
     <>
@@ -747,15 +811,15 @@ const PrintPreviewModal = ({ label, onClose }) => {
         </div>
       </div>
 
-      {/* ================= PRINT CONTENT (HIDDEN FROM UI) ================= */}
-      <div className="print-container">
-        <div
-          className="print-sheet"
-          style={{
-            width: `${sheetWidth}px`,
-            height: `${sheetHeight}px`,
-          }}
-        >
+     {/* ================= PRINT CONTENT (HIDDEN FROM UI) ================= */}
+<div className="print-container">
+  <div
+    className="print-sheet"
+    style={{
+      width: `${labelSize.width}mm`,   // ← change from px to mm
+      height: `${labelSize.height}mm`, // ← change from px to mm
+    }}
+  >
           <div
             className="print-grid"
             style={{
@@ -792,92 +856,114 @@ const PrintPreviewModal = ({ label, onClose }) => {
       </div>
 
       {/* ================= PRINT CSS ================= */}
-      <style>{`
-        @media print {
-          * {
-            visibility: hidden !important;
-          }
+     <style>{`
+@media print {
+  /* Hide browser header/footer (date, URL, page numbers) */
+  @page {
+    size: ${labelSize.width}mm ${labelSize.height}mm;
+    margin: 0mm !important;
+  }
 
-          .print-container,
-          .print-container *,
-          .print-sheet,
-          .print-sheet *,
-          .print-grid,
-          .print-grid *,
-          .print-label,
-          .print-label * {
-            visibility: visible !important;
-          }
+  /* Chrome/Edge specific - force hide headers */
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 
-          .print-container {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+    * {
+      visibility: hidden !important;
+    }
 
-          .print-sheet {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            display: block !important;
-          }
+    .print-container,
+    .print-container *,
+    .print-sheet,
+    .print-sheet *,
+    .print-grid,
+    .print-grid *,
+    .print-label,
+    .print-label * {
+      visibility: visible !important;
+    }
 
-          .print-grid {
-            display: grid !important;
-          }
+    .print-container {
+      position: fixed !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: ${labelSize.width}mm !important;
+      height: ${labelSize.height}mm !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
 
-          .print-label {
-            display: block !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            overflow: hidden !important;
-            box-sizing: border-box !important;
-          }
+    .print-sheet {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: ${labelSize.width}mm !important;
+      height: ${labelSize.height}mm !important;
+    }
 
-          /* Preserve borders on all elements inside labels */
-          .print-label * {
-            border-color: inherit;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
+    .print-grid {
+      display: grid !important;
+      width: ${labelSize.width}mm !important;
+      height: ${labelSize.height}mm !important;
+    }
 
-          /* Ensure images render in print */
-          .print-label img {
-            display: block !important;
-            max-width: 100% !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+    .print-label {
+      display: block !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
 
-          @page {
-            size: auto;
-            margin: 0mm;
-            padding: 0mm;
-          }
+    .print-label * {
+      border-color: inherit;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
 
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-        }
+    .print-label img {
+      display: block !important;
+      max-width: 100% !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
 
-        @media screen {
-          .print-container {
-            position: absolute;
-            left: -9999px;
-            top: -9999px;
-            visibility: hidden;
-          }
-        }
-      `}</style>
+   @page {
+  size: ${labelSize.width}mm ${labelSize.height}mm;
+  margin: 0mm;
+  padding: 0mm;
+  /* Remove browser header/footer */
+  margin-top: 0mm;
+  margin-bottom: 0mm;
+}
+
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+
+  @media screen {
+    .print-container {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      visibility: hidden;
+    }
+  }
+`}</style>
     </>
   );
 };

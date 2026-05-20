@@ -65,10 +65,10 @@ async function isPrinterConnected(printerName) {
 
     // Status 2 (Unknown) often means disconnected for USB
     // Status 7 (Offline)
-    if (printerStatus.PrinterStatus === 7 || printerStatus.PrinterStatus === 2) {
-      console.log(`Printer ${printerName} has Status ${printerStatus.PrinterStatus}`);
-      return false;
-    }
+    if (printerStatus.PrinterStatus === 7) {
+  console.log(`Printer ${printerName} is Offline (status 7)`);
+  return false;
+}
 
     // More aggressive check for USB printers using Get-Printer (modern PowerShell)
     try {
@@ -122,32 +122,31 @@ router.get("/api/printers", async (req, res) => {
 
     const connectedPrinters = [];
 
-    for (const printer of printers) {
-      if (printer.WorkOffline === true || printer.PrinterStatus === 7) {
-        console.log(`Skipping offline printer: ${printer.Name}`);
-        continue;
-      }
+   for (const printer of printers) {
+  // Only skip if explicitly marked offline
+  if (printer.WorkOffline === true) {
+    console.log(`Skipping WorkOffline printer: ${printer.Name}`);
+    continue;
+  }
 
-      if (printer.PortName && printer.PortName.includes("USB")) {
-        const isConnected = await isPrinterConnected(printer.Name);
-        if (!isConnected) {
-          console.log(`USB printer not connected: ${printer.Name}`);
-          continue;
-        }
-      }
+  // Only skip status 7 (true offline), NOT status 2 (unknown/idle)
+  if (printer.PrinterStatus === 7) {
+    console.log(`Skipping offline printer: ${printer.Name}`);
+    continue;
+  }
 
-      connectedPrinters.push({
-        name: printer.Name,
-        displayName: printer.Name,
-        driver: printer.DriverName,
-        port: printer.PortName,
-        status: getStatusText(printer.PrinterStatus),
-        connection: determineConnection(printer.PortName),
-        isNetwork: printer.Shared || printer.Network || false,
-        isDefault: printer.Default === true,
-        workOffline: printer.WorkOffline === true,
-      });
-    }
+  connectedPrinters.push({
+    name: printer.Name,
+    displayName: printer.Name,
+    driver: printer.DriverName,
+    port: printer.PortName,
+    status: getStatusText(printer.PrinterStatus),
+    connection: determineConnection(printer.PortName),
+    isNetwork: printer.Shared || printer.Network || false,
+    isDefault: printer.Default === true,
+    workOffline: printer.WorkOffline === true,
+  });
+}
 
     console.log(
       `Found ${connectedPrinters.length} connected printers out of ${printers.length} total`,

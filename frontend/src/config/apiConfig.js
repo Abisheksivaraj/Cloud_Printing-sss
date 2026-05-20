@@ -1,11 +1,11 @@
 // API Configuration
 const API_BASE_URL =
   import.meta.env.VITE_API_URL
-// "https://cloud-printing-sss.onrender.com";
+"https://cloud-printing-sss.onrender.com";
 
 
 // const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8081";
+//   import.meta.env.VITE_API_URL || "http://localhost:8081";
 
 export const API_ENDPOINTS = {
   // Authentication
@@ -31,8 +31,7 @@ export const API_ENDPOINTS = {
     `${API_BASE_URL}/api/printer/${encodeURIComponent(name)}/status`,
   PRINTER_PROPERTIES: `${API_BASE_URL}/api/printer/properties`,
   PRINTER_PREFERENCES: `${API_BASE_URL}/api/printer/preferences`,
-  PRINTER_STATUS: (name) =>
-    `${API_BASE_URL}/api/printer/${encodeURIComponent(name)}/status`,
+  
   PRINTER_SETTINGS: `${API_BASE_URL}/api/open-printer-settings`,
 
   // Templates

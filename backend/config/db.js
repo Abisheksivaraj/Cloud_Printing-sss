@@ -3,7 +3,7 @@ require("dotenv").config();
 
 const connectDb = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/CloudPrinting";
+    const mongoUri = process.env.MONGO_URI || "mongodb://archerytechnocratspvtltd_db_user:4iXTmb4io5ThbFp6@ac-e15b8cm-shard-00-00.r6nfrfp.mongodb.net:27017,ac-e15b8cm-shard-00-01.r6nfrfp.mongodb.net:27017,ac-e15b8cm-shard-00-02.r6nfrfp.mongodb.net:27017/?ssl=true&replicaSet=atlas-cikqkm-shard-0&authSource=admin&appName=ShanthiGears";
     
     // Connection options for better stability
     const options = {
