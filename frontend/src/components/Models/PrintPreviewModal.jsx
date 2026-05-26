@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Printer, Settings, Maximize2, Minimize2, Check } from "lucide-react";
 import BarcodeElement from "../designer/code";
 import { useTheme } from "../../ThemeContext";
 import { printService, authService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
-
+import { printLabel, connectQZ } from "../../utils/qzPrinter";
+import renderShapeContent, { isShapeType } from "../../utils/renderShapeContent";
 const MM_TO_PX = 3.7795275591;
 
 /* =========================
@@ -74,37 +75,72 @@ const RenderLabel = ({ label }) => {
         };
 
         // Handle different element types
-        if (element.type === "text" || element.type === "placeholder") {
+        if (element.type === "text") {
           return (
             <div
               key={elIndex}
               style={{
                 ...style,
-                display: "flex",
-                alignItems: "center",
-                justifyContent:
-                  element.textAlign === "center"
-                    ? "center"
-                    : element.textAlign === "right"
-                      ? "flex-end"
-                      : "flex-start",
-                padding: "0 4px",
-                lineHeight: element.lineHeight || "1.2",
-                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                border: element.borderWidth > 0
+                  ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
+                  : 'none',
                 fontWeight: element.fontWeight || "normal",
                 fontStyle: element.fontStyle || "normal",
                 textDecoration: element.textDecoration || "none",
+                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                lineHeight: element.lineHeight || 1.2,
+                display: "flex",
+                alignItems: "flex-start",
+                padding: '4px 6px',
+                backgroundColor: element.backgroundColor || 'transparent',
               }}
             >
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {element.content}
-              </span>
+              <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'flex-start' }}>
+                <span
+                  style={{
+                    width: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    textAlignLast: element.textAlign === 'justify' ? 'justify' : 'auto',
+                  }}
+                >
+                  {element.content}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        if (element.type === "placeholder") {
+          return (
+            <div
+              key={elIndex}
+              style={{
+                ...style,
+                border: element.borderWidth > 0
+                  ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
+                  : '1px dashed rgba(0,0,0,0.2)',
+                backgroundColor: "rgba(251,191,36,0.05)",
+                display: "flex",
+                alignItems: "center",
+                fontWeight: element.fontWeight || "normal",
+                fontStyle: element.fontStyle || "normal",
+                textDecoration: element.textDecoration || "none",
+                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                lineHeight: element.lineHeight || 1.2,
+                padding: "0",
+              }}
+            >
+              <div style={{ width: '100%', overflow: 'hidden' }}>
+                <span
+                  className="whitespace-nowrap font-mono text-sm w-full overflow-hidden"
+                  style={{ color: element.color || "#f59e0b" }}
+                >
+                  {element.content || "{{placeholder}}"}
+                </span>
+              </div>
             </div>
           );
         }
@@ -140,19 +176,19 @@ const RenderLabel = ({ label }) => {
               key={elIndex}
               style={{
                 position: "absolute",
-                left: Math.min(x1, x2),
-                top: Math.min(y1, y2),
-                width: Math.abs(x2 - x1),
-                height: Math.abs(y2 - y1),
-                overflow: "visible",
-                opacity: element.opacity !== undefined ? element.opacity : 1,
+                left: 0,
+                top: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: element.zIndex || 0,
+                pointerEvents: "none",
               }}
             >
               <line
-                x1={x1 < x2 ? 0 : Math.abs(x2 - x1)}
-                y1={y1 < y2 ? 0 : Math.abs(y2 - y1)}
-                x2={x1 < x2 ? Math.abs(x2 - x1) : 0}
-                y2={y1 < y2 ? Math.abs(y2 - y1) : 0}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
                 stroke={element.borderColor || "#000000"}
                 strokeWidth={element.borderWidth || 2}
                 strokeDasharray={
@@ -167,13 +203,19 @@ const RenderLabel = ({ label }) => {
           );
         }
 
-        if (element.type === "rectangle") {
-          return <div key={elIndex} style={style}></div>;
-        }
-
-        if (element.type === "circle") {
+        // All shape types (rectangle, circle, dot, triangle, stars, arrows, etc.)
+        if (isShapeType(element.type)) {
           return (
-            <div key={elIndex} style={{ ...style, borderRadius: "50%" }}></div>
+            <div
+              key={elIndex}
+              style={{
+                ...style,
+                backgroundColor: "transparent",
+                border: "none",
+              }}
+            >
+              {renderShapeContent(element)}
+            </div>
           );
         }
 
@@ -295,6 +337,32 @@ const PrintPreviewModal = ({ label, onClose }) => {
   });
   const [showCutMarks, setShowCutMarks] = useState(true);
 
+  // Printer state
+  const [printers, setPrinters] = useState([]);
+  const [selectedPrinter, setSelectedPrinter] = useState("");
+  const [loadingPrinters, setLoadingPrinters] = useState(true);
+  const [printerError, setPrinterError] = useState(null);
+
+  useEffect(() => {
+    const fetchPrinters = async () => {
+      try {
+        setLoadingPrinters(true);
+        setPrinterError(null);
+        const data = await apiCall(API_ENDPOINTS.PRINTERS);
+        const list = data.printers || [];
+        setPrinters(list);
+        const def = list.find((p) => p.isDefault);
+        setSelectedPrinter(def ? def.name : list[0]?.name || "");
+      } catch (err) {
+        console.error("Failed to load printers:", err);
+        setPrinterError("Could not load printers");
+      } finally {
+        setLoadingPrinters(false);
+      }
+    };
+    fetchPrinters();
+  }, []);
+
   const config = MULTI_UP_CONFIGS[multiUpConfig];
   const { cols, rows } = config;
 
@@ -322,247 +390,63 @@ const PrintPreviewModal = ({ label, onClose }) => {
     1,
   );
 
- const handlePrint = async () => {
+const handlePrint = async () => {
   try {
-    // Step 1: Check printer connectivity
-    let printerName = "System Default";
-    let printerConnected = false;
-    let printerError = null;
+    await connectQZ();
 
-    try {
-      const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
-      if (printersData.printers?.length > 0) {
-        const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
-        printerName = defaultPrinter.name;
-
-        try {
-          const statusData = await apiCall(API_ENDPOINTS.PRINTER_STATUS(printerName));
-          printerConnected = statusData.isConnected;
-          if (!printerConnected) {
-            printerError = `Printer "${printerName}" is offline or disconnected`;
-          }
-        } catch (statusErr) {
-          printerError = `Unable to check status of printer "${printerName}": ${statusErr.message}`;
-        }
-      } else {
-        printerError = "No printers found. Please connect a printer and try again.";
-      }
-    } catch (e) {
-      printerError = `Could not fetch printers: ${e.message}`;
-    }
-
-    const printedLengthMm = (sheetHeight / MM_TO_PX).toFixed(1);
-    const labelName = label.name || "Unnamed Label";
-
-    // Step 2: If printer not connected, log failed job
-    if (printerError) {
-      const errorLog = [{
-        labelIndex: 0,
-        labelName,
-        errorType: "printer_disconnected",
-        message: printerError,
-        severity: "critical",
-        timestamp: new Date().toISOString(),
-      }];
-
-      const jobData = {
-        printerName,
-        documentName: labelName,
-        templateId: label._id || label.id,
-        documentType: "label",
-        copies: cols * rows,
-        priority: "normal",
-        status: "failed",
-        totalRecords: 1,
-        printedRecords: 0,
-        printedLength: 0,
-        errorMessage: printerError,
-        errorLog,
-        errorDetails: {
-          category: "printer_disconnected",
-          printerState: "disconnected",
-          totalErrors: 1,
-          firstErrorAt: new Date().toISOString(),
-          lastErrorAt: new Date().toISOString(),
-        },
-        metadata: {
-          labelWidth: labelSize.width,
-          labelHeight: labelSize.height,
-          cols,
-          rows,
-        },
-      };
-
-      try {
-        await printService.createJob(jobData);
-      } catch (saveErr) {
-        console.error("Failed to save error to history:", saveErr);
-      }
-
-      alert(`❌ Print Failed\n\n${printerError}\n\nThis error has been logged to your print history.`);
-      return;
-    }
-
-    // Step 3: Printer connected - create job record
-    const jobData = {
-      printerName,
-      documentName: labelName,
-      templateId: label._id || label.id,
-      documentType: "label",
-      copies: cols * rows,
-      priority: "normal",
-      status: "printing",
-      totalRecords: 1,
-      printedRecords: 0,
-      printedLength: parseFloat(printedLengthMm),
-      metadata: {
-        labelWidth: labelSize.width,
-        labelHeight: labelSize.height,
-        cols,
-        rows,
-      },
-    };
-
-    const { job } = await printService.createJob(jobData);
-
-    // Step 4: Build print content from current rendered label grid
-    const labelW = labelSize.width * MM_TO_PX;
-    const labelH = labelSize.height * MM_TO_PX;
+    // Get label HTML content
     const labelHTML = document.querySelector('.print-grid')?.innerHTML || '';
-
-    // Step 5: Open new window with only label content
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-
-    if (!printWindow) {
-      alert("Pop-up blocked! Please allow pop-ups for this site and try again.");
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
+    
+    const fullHTML = `
       <html>
         <head>
-          <title>${labelName}</title>
           <style>
-            @page {
-              size: ${labelSize.width}mm ${labelSize.height}mm;
-              margin: 0;
-            }
-            * {
-              box-sizing: border-box;
-              margin: 0;
-              padding: 0;
-            }
-            html, body {
-              width: ${labelSize.width}mm;
-              height: ${labelSize.height}mm;
-              overflow: hidden;
-              background: #fff;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { width: ${labelSize.width}mm; height: ${labelSize.height}mm; }
             .print-grid {
               display: grid;
-              grid-template-columns: repeat(${cols}, ${labelW}px);
-              grid-template-rows: repeat(${rows}, ${labelH}px);
-              column-gap: ${horizontalGap * MM_TO_PX}px;
-              row-gap: ${verticalGap * MM_TO_PX}px;
-              padding: ${margins.top * MM_TO_PX}px ${margins.right * MM_TO_PX}px ${margins.bottom * MM_TO_PX}px ${margins.left * MM_TO_PX}px;
+              grid-template-columns: repeat(${cols}, ${labelSize.width * MM_TO_PX}px);
               width: ${labelSize.width}mm;
               height: ${labelSize.height}mm;
             }
             .print-label {
               overflow: hidden;
-              position: relative;
               border: 1px solid #000;
-              width: ${labelW}px;
-              height: ${labelH}px;
             }
           </style>
         </head>
         <body>
-          <div class="print-grid">
-            ${labelHTML}
-          </div>
+          <div class="print-grid">${labelHTML}</div>
         </body>
       </html>
-    `);
+    `;
 
-    printWindow.document.close();
-    printWindow.focus();
+    await printLabel(selectedPrinter, fullHTML, labelSize.width, labelSize.height);
 
-    // Step 6: Print after content loads
-    await new Promise((resolve) => {
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-        resolve();
-      };
-      // Fallback if onload doesn't fire
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-        resolve();
-      }, 800);
-    });
+    // Log success to print history
+    const jobData = {
+      printerName: selectedPrinter,
+      documentName: label.templateName || "Print Label",
+      documentType: "label",
+      copies: cols * rows,
+      priority: "normal",
+      status: "completed",
+      totalRecords: cols * rows,
+      printedRecords: cols * rows,
+      printedLength: labelSize.height * rows,
+      metadata: {
+        labelWidth: labelSize.width,
+        labelHeight: labelSize.height,
+        columns: cols,
+        rows: rows,
+        isBulk: false,
+      },
+    };
 
-    // Step 7: Update job status to completed
-    try {
-      await printService.updateStatus(job._id, "completed", null, [{
-        labelIndex: 0,
-        labelName,
-        errorType: "unknown",
-        message: "Job successfully sent to system print spooler",
-        severity: "info",
-        timestamp: new Date().toISOString(),
-      }]);
-    } catch (updateErr) {
-      console.error("Failed to update job status:", updateErr);
-    }
+    await printService.createJob(jobData);
 
   } catch (error) {
-    console.error("Print failed:", error);
-
-    const errorLog = [{
-      labelIndex: 0,
-      labelName: label.name || "Unnamed Label",
-      errorType: "printer_error",
-      message: error.message || "An unexpected error occurred during printing",
-      severity: "error",
-      timestamp: new Date().toISOString(),
-    }];
-
-    try {
-      await printService.createJob({
-        printerName: "Unknown",
-        documentName: label.name || "Unnamed Label",
-        templateId: label._id || label.id,
-        documentType: "label",
-        copies: cols * rows,
-        status: "failed",
-        totalRecords: 1,
-        printedRecords: 0,
-        errorMessage: error.message || "Unexpected print error",
-        errorLog,
-        errorDetails: {
-          category: "printer_error",
-          printerState: "error",
-          totalErrors: 1,
-          firstErrorAt: new Date().toISOString(),
-          lastErrorAt: new Date().toISOString(),
-        },
-        metadata: {
-          labelWidth: labelSize.width,
-          labelHeight: labelSize.height,
-          cols,
-          rows,
-        },
-      });
-    } catch (saveErr) {
-      console.error("Failed to save error to history:", saveErr);
-    }
-
-    alert(`❌ Print Failed\n\n${error.message}\n\nThis error has been logged to your print history.`);
+    alert(`❌ Print Failed\n\n${error.message}`);
   }
 };
 
@@ -611,6 +495,47 @@ const PrintPreviewModal = ({ label, onClose }) => {
                 style={{ backgroundColor: theme.bg, borderColor: theme.border }}
               >
                 <h3 className="font-bold text-sm uppercase tracking-wider mb-6" style={{ color: theme.textMuted }}>Configuration</h3>
+
+                {/* Target Printer */}
+                <div className="mb-8">
+                  <label className="block text-sm font-semibold mb-2" style={{ color: theme.text }}>
+                    Target Printer
+                  </label>
+                  {loadingPrinters ? (
+                    <div className="input text-sm flex items-center gap-2" style={{ color: theme.textMuted }}>
+                      <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full" />
+                      Loading printers…
+                    </div>
+                  ) : printerError ? (
+                    <div className="text-xs rounded-lg p-2" style={{ color: "#ef4444", background: "rgba(239,68,68,0.08)" }}>
+                      {printerError}
+                    </div>
+                  ) : printers.length === 0 ? (
+                    <div className="text-xs rounded-lg p-2" style={{ color: theme.textMuted, background: theme.bg }}>
+                      No printers found
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedPrinter}
+                      onChange={(e) => setSelectedPrinter(e.target.value)}
+                      className="input text-sm"
+                    >
+                      {printers.map((p) => (
+                        <option key={p.name} value={p.name}>
+                          {p.displayName || p.name}{p.isDefault ? " (Default)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {selectedPrinter && (() => {
+                    const p = printers.find(pr => pr.name === selectedPrinter);
+                    return p ? (
+                      <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                        {p.connection} · {p.status}
+                      </p>
+                    ) : null;
+                  })()}
+                </div>
 
                 {/* Multi-Up Layout */}
                 <div className="mb-8">
@@ -790,7 +715,11 @@ const PrintPreviewModal = ({ label, onClose }) => {
           {/* Footer */}
           <div className="flex justify-between items-center border-t p-6" style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
             <div className="text-sm" style={{ color: theme.textMuted }}>
-              Ready to print {cols * rows} labels
+              {selectedPrinter ? (
+                <span>🖨️ <strong>{selectedPrinter}</strong> · {cols * rows} label{cols * rows !== 1 ? "s" : ""}</span>
+              ) : (
+                <span>Ready to print {cols * rows} labels</span>
+              )}
             </div>
             <div className="flex gap-3">
               <button
@@ -801,7 +730,8 @@ const PrintPreviewModal = ({ label, onClose }) => {
               </button>
               <button
                 onClick={handlePrint}
-                className="btn btn-primary px-8"
+                disabled={!selectedPrinter || loadingPrinters}
+                className="btn btn-primary px-8 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Printer size={18} className="mr-2" />
                 Print Labels

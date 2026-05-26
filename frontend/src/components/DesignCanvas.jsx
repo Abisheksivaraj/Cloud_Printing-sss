@@ -22,261 +22,7 @@ const SHAPE_TYPES = [
 
 const isShapeElement = (type) => SHAPE_TYPES.includes(type);
 
-const renderShapeContent = (element) => {
-  const fill = element.backgroundColor || "transparent";
-  const stroke = element.borderColor || "#000000";
-  const strokeWidth = element.borderWidth !== undefined ? element.borderWidth : 2;
-  const strokeDash = element.borderStyle === "dashed" ? "5,5" : element.borderStyle === "dotted" ? "2,2" : "none";
-  const borderRadius = element.borderRadius || 15;
-
-  const svgStyle = {
-    width: "100%",
-    height: "100%",
-    display: "block",
-  };
-
-  const commonProps = {
-    fill,
-    stroke,
-    strokeWidth,
-    strokeDasharray: strokeDash,
-    style: { vectorEffect: "non-scaling-stroke" },
-  };
-
-  switch (element.type) {
-    case "rectangle":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <rect x={strokeWidth / 2} y={strokeWidth / 2} width={100 - strokeWidth} height={100 - strokeWidth} {...commonProps} />
-        </svg>
-      );
-    case "rounded-rectangle":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <rect x={strokeWidth / 2} y={strokeWidth / 2} width={100 - strokeWidth} height={100 - strokeWidth} rx={borderRadius} ry={borderRadius} {...commonProps} />
-        </svg>
-      );
-    case "circle":
-    case "ellipse":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <ellipse cx="50" cy="50" rx={50 - strokeWidth / 2} ry={50 - strokeWidth / 2} {...commonProps} />
-        </svg>
-      );
-    case "dot":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          <circle cx="50" cy="50" r={48 - strokeWidth / 2} fill={fill === 'transparent' ? stroke : fill} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={strokeDash} />
-        </svg>
-      );
-    case "triangle":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 98,98 2,98" {...commonProps} />
-        </svg>
-      );
-    case "right-triangle":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="2,2 2,98 98,98" {...commonProps} />
-        </svg>
-      );
-    case "parallelogram":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="25,2 98,2 75,98 2,98" {...commonProps} />
-        </svg>
-      );
-    case "trapezoid":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="20,2 80,2 98,98 2,98" {...commonProps} />
-        </svg>
-      );
-    case "diamond":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 98,50 50,98 2,50" {...commonProps} />
-        </svg>
-      );
-    case "pentagon":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 98,38 80,98 20,98 2,38" {...commonProps} />
-        </svg>
-      );
-    case "hexagon":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 98,25 98,75 50,98 2,75 2,25" {...commonProps} />
-        </svg>
-      );
-    case "octagon":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="30,2 70,2 98,30 98,70 70,98 30,98 2,70 2,30" {...commonProps} />
-        </svg>
-      );
-    case "cross":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="35,2 65,2 65,35 98,35 98,65 65,65 65,98 35,98 35,65 2,65 2,35 35,35" {...commonProps} />
-        </svg>
-      );
-    case "heart":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 50,25 C 40,5 15,5 5,25 C -5,45 20,75 50,98 C 80,75 105,45 95,25 C 85,5 60,5 50,25 Z" {...commonProps} />
-        </svg>
-      );
-    case "moon":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 80,10 A 40,40 0 1,0 80,90 A 30,30 0 1,1 80,10 Z" {...commonProps} />
-        </svg>
-      );
-    case "arrow-right":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="2,30 60,30 60,10 98,50 60,90 60,70 2,70" {...commonProps} />
-        </svg>
-      );
-    case "arrow-left":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="98,30 40,30 40,10 2,50 40,90 40,70 98,70" {...commonProps} />
-        </svg>
-      );
-    case "arrow-up":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="30,98 30,40 10,40 50,2 90,40 70,40 70,98" {...commonProps} />
-        </svg>
-      );
-    case "arrow-down":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="30,2 30,60 10,60 50,98 90,60 70,60 70,2" {...commonProps} />
-        </svg>
-      );
-    case "arrow-left-right":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="2,50 25,20 25,35 75,35 75,20 98,50 75,80 75,65 25,65 25,80" {...commonProps} />
-        </svg>
-      );
-    case "arrow-up-down":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 20,25 35,25 35,75 20,75 50,98 80,75 65,75 65,25 80,25" {...commonProps} />
-        </svg>
-      );
-    case "line-arrow-right":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 10,50 L 90,50 M 70,30 L 90,50 L 70,70" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "line-arrow-left":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 90,50 L 10,50 M 30,30 L 10,50 L 30,70" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "line-arrow-up":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 50,90 L 50,10 M 30,30 L 50,10 L 70,30" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "line-arrow-down":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 50,10 L 50,90 M 30,70 L 50,90 L 70,70" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "line-arrow-h":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 10,50 L 90,50 M 30,30 L 10,50 L 30,70 M 70,30 L 90,50 L 70,70" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "line-arrow-v":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 50,10 L 50,90 M 30,30 L 50,10 L 70,30 M 30,70 L 50,90 L 70,70" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "arrow-up-left":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 85,85 L 15,15 M 45,15 L 15,15 L 15,45" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "arrow-up-right":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 15,85 L 85,15 M 55,15 L 85,15 L 85,45" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "arrow-down-left":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 85,15 L 15,85 M 15,55 L 15,85 L 45,85" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "arrow-down-right":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 15,15 L 85,85 M 55,85 L 85,85 L 85,55" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "star-4":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 62,38 98,50 62,62 50,98 38,62 2,50 38,38" {...commonProps} />
-        </svg>
-      );
-    case "star-5":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 65,35 98,35 72,57 82,90 50,70 18,90 28,57 2,35 35,35" {...commonProps} />
-        </svg>
-      );
-    case "star-6":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 63,28 95,28 75,50 95,72 63,72 50,98 37,72 5,72 25,50 5,28 37,28" {...commonProps} />
-        </svg>
-      );
-    case "star-8":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <polygon points="50,2 60,35 85,15 65,40 98,50 65,60 85,85 60,65 50,98 40,65 15,85 35,60 2,50 35,40 15,15 40,35" {...commonProps} />
-        </svg>
-      );
-    case "arc":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 10,90 A 40,40 0 0,1 90,90" {...commonProps} fill="none" />
-        </svg>
-      );
-    case "double-arc":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 10,90 A 40,40 0 0,1 90,90 L 90,75 A 25,25 0 0,0 10,75 Z" {...commonProps} />
-        </svg>
-      );
-    case "wave":
-      return (
-        <svg style={svgStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M 2,20 C 30,5 70,35 98,20 L 98,80 C 70,95 30,65 2,80 Z" {...commonProps} />
-        </svg>
-      );
-    default:
-      return null;
-  }
-};
+import renderShapeContent from "../utils/renderShapeContent";
 
 const DesignCanvas = forwardRef(
   (
@@ -1547,8 +1293,8 @@ const DesignCanvas = forwardRef(
         if (isDrawingAny) return null;
 
         const ROTATE_OFFSET = 28; // px above element
-        const handleSize = 7;      // uniform size for all handles
-        const handleHalf = Math.floor(handleSize / 2);
+        const handleSize = 8;      // uniform size for all handles
+        const handleHalf = handleSize / 2;
         const handleColor = 'var(--color-primary)';
 
         const handles = [
@@ -1571,45 +1317,55 @@ const DesignCanvas = forwardRef(
                 left: '50%',
                 top: -ROTATE_OFFSET,
                 width: 1,
-                height: ROTATE_OFFSET - 8,
+                height: ROTATE_OFFSET,
                 background: handleColor,
-                opacity: 0.5,
+                opacity: 0.4,
                 transform: 'translateX(-50%)',
                 pointerEvents: 'none',
                 zIndex: 49,
               }}
             />
-            {/* Rotation handle */}
+            {/* Rotation handle group (Icon + Dot) */}
             <div
               title="Rotate (Shift = snap 15°)"
               style={{
                 position: 'absolute',
                 left: '50%',
-                top: -ROTATE_OFFSET - 12,
+                top: -ROTATE_OFFSET - 20,
                 transform: 'translateX(-50%)',
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                background: 'white',
-                border: `1.5px solid ${handleColor}`,
+                width: 24,
+                height: 28,
                 cursor: 'grab',
                 zIndex: 51,
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.20)',
+                justifyContent: 'space-between',
                 pointerEvents: 'auto',
                 userSelect: 'none',
               }}
               onMouseDown={(e) => handleRotateMouseDown(e, element)}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <path d="M2 6.5a4.5 4.5 0 1 1 4.5 4.5" stroke={handleColor} strokeWidth="1.6" strokeLinecap="round" fill="none" />
-                <polyline points="2,4.5 2,6.5 4,6.5" stroke={handleColor} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              {/* Rotation Curved Arrow Icon */}
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ color: '#757575', cursor: 'inherit' }}>
+                <path d="M2 6.5a4.5 4.5 0 1 1 4.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                <polyline points="2,4.5 2,6.5 4,6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
               </svg>
+              {/* Small round handle at the top of the stem */}
+              <div
+                style={{
+                  width: handleSize,
+                  height: handleSize,
+                  borderRadius: '50%',
+                  background: 'white',
+                  border: `1px solid ${handleColor}`,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                  cursor: 'inherit',
+                }}
+              />
             </div>
 
-            {/* Resize handles — uniform small squares */}
+            {/* Resize handles — uniform small round circles */}
             {handles.map((handle) => (
               <div
                 key={handle.pos}
@@ -1618,10 +1374,10 @@ const DesignCanvas = forwardRef(
                   width: handleSize,
                   height: handleSize,
                   background: 'white',
-                  border: `1.5px solid ${handleColor}`,
-                  borderRadius: 1,
+                  border: `1px solid ${handleColor}`,
+                  borderRadius: '50%',
                   zIndex: 50,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   cursor: handle.cursor,
                   pointerEvents: 'auto',
                   ...handle.style,
@@ -1665,10 +1421,7 @@ const DesignCanvas = forwardRef(
                 width: "100%",
                 height: "100%",
                 zIndex: element.zIndex || 0,
-                pointerEvents:
-                  isDrawingLine || isDrawingBarcode || isDrawingShape
-                    ? "none"
-                    : "all",
+                pointerEvents: "none",
               }}
             >
               <line
@@ -1687,23 +1440,13 @@ const DesignCanvas = forwardRef(
                 }
                 style={{
                   cursor: isDragging ? "grabbing" : "move",
+                  pointerEvents:
+                    isDrawingLine || isDrawingBarcode || isDrawingShape
+                      ? "none"
+                      : "stroke",
                 }}
                 onMouseDown={(e) => {
-                  const rect = canvasRef.current.getBoundingClientRect();
-                  const scale = displayZoom / 100;
-                  const clickX = (e.clientX - rect.left) / scale;
-                  const clickY = (e.clientY - rect.top) / scale;
-
-                  const distToStart = Math.sqrt(
-                    Math.pow(clickX - x1, 2) + Math.pow(clickY - y1, 2),
-                  );
-                  const distToEnd = Math.sqrt(
-                    Math.pow(clickX - x2, 2) + Math.pow(clickY - y2, 2),
-                  );
-
-                  if (distToStart > 10 && distToEnd > 10) {
-                    handleElementMouseDown(e, element);
-                  }
+                  handleElementMouseDown(e, element);
                 }}
               />
 
@@ -1715,11 +1458,11 @@ const DesignCanvas = forwardRef(
                     <circle
                       cx={x1}
                       cy={y1}
-                      r="5"
+                      r="4"
                       fill="white"
                       stroke="var(--color-primary)"
-                      strokeWidth="2"
-                      style={{ cursor: "move" }}
+                      strokeWidth="1"
+                      style={{ cursor: "move", pointerEvents: "auto" }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         handleLinePointMouseDown(e, element, "start");
@@ -1729,11 +1472,11 @@ const DesignCanvas = forwardRef(
                     <circle
                       cx={x2}
                       cy={y2}
-                      r="5"
+                      r="4"
                       fill="white"
                       stroke="var(--color-primary)"
-                      strokeWidth="2"
-                      style={{ cursor: "move" }}
+                      strokeWidth="1"
+                      style={{ cursor: "move", pointerEvents: "auto" }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         handleLinePointMouseDown(e, element, "end");
@@ -1773,7 +1516,7 @@ const DesignCanvas = forwardRef(
               : "move",
           border:
             isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape && !isDrawingText
-              ? "2px solid var(--color-primary)"
+              ? "1px solid var(--color-primary)"
               : !isShape && element.borderWidth > 0
                 ? `${element.borderWidth}px ${element.borderStyle || "solid"} ${element.borderColor || "#000000"}`
                 : "none",
@@ -1807,7 +1550,7 @@ const DesignCanvas = forwardRef(
                       !isDrawingLine &&
                       !isDrawingBarcode &&
                       !isDrawingShape
-                      ? "2px dashed var(--color-primary)"
+                      ? "1px dashed var(--color-primary)"
                       : "1px dashed rgba(0,0,0,0.2)",
                   backgroundColor: isSelected
                     ? "rgba(59,130,246,0.05)"
@@ -1844,8 +1587,8 @@ const DesignCanvas = forwardRef(
                   ...style,
                   border: isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape && !isDrawingText
                     ? editingElementId === element.id
-                      ? '2px solid var(--color-primary)'
-                      : '2px dashed var(--color-primary)'
+                      ? '1px solid var(--color-primary)'
+                      : '1px dashed var(--color-primary)'
                     : element.borderWidth > 0
                       ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
                       : 'none',
@@ -1993,7 +1736,7 @@ const DesignCanvas = forwardRef(
                   cursor: isDragging ? "grabbing" : isDrawingLine || isDrawingBarcode || isDrawingShape ? "crosshair" : "move",
                   pointerEvents: isDrawingLine || isDrawingBarcode || isDrawingShape ? "none" : "auto",
                   userSelect: "none",
-                  border: isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape ? "2px solid var(--color-primary)" : "none",
+                  border: isSelected && !isDrawingLine && !isDrawingBarcode && !isDrawingShape ? "1px solid var(--color-primary)" : "none",
                   overflow: "visible",   // allow rotation handle above
                   boxSizing: "border-box",
                 }}
@@ -2302,6 +2045,7 @@ const DesignCanvas = forwardRef(
               }}
             >
               <div
+                id="printable-canvas"
                 ref={canvasRef}
                 className="relative bg-white shadow-xl transition-shadow"
                 style={{
@@ -2314,7 +2058,7 @@ const DesignCanvas = forwardRef(
                   borderRadius: "3px",
                   boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
                   backgroundImage: showGrid
-                    ? `radial-gradient(${gridColor} 1px, transparent 1px)`
+                    ? `linear-gradient(to right, ${gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)`
                     : "none",
                   backgroundSize: showGrid ? "20px 20px" : "auto",
                   cursor: canvasCursor,
@@ -2456,7 +2200,7 @@ const DesignCanvas = forwardRef(
                         top: tempBarcode.y,
                         width: tempBarcode.width,
                         height: tempBarcode.height,
-                        border: "2px dashed var(--color-primary)",
+                        border: "1.5px dashed var(--color-primary)",
                         backgroundColor: "rgba(255, 255, 255, 0.9)",
                         pointerEvents: "none",
                         display: "flex",

@@ -162,7 +162,23 @@ const LabelDesigner = ({
   const { t } = useLanguage();
   const { showPrompt } = useAlert();
 
-  const [elements, setElements] = useState(label?.elements || []);
+  const [elements, setElements] = useState(() => {
+    return (label?.elements || []).map(el => ({
+      ...el,
+      x: Number(el.x ?? 50),
+      y: Number(el.y ?? 50),
+      width: Number(el.width ?? 100),
+      height: Number(el.height ?? 30),
+      x1: el.x1 !== undefined ? Number(el.x1) : undefined,
+      y1: el.y1 !== undefined ? Number(el.y1) : undefined,
+      x2: el.x2 !== undefined ? Number(el.x2) : undefined,
+      y2: el.y2 !== undefined ? Number(el.y2) : undefined,
+      borderWidth: el.borderWidth !== undefined ? Number(el.borderWidth) : undefined,
+      fontSize: el.fontSize !== undefined ? Number(el.fontSize) : undefined,
+      rotation: el.rotation !== undefined ? Number(el.rotation) : undefined,
+      zIndex: el.zIndex !== undefined ? Number(el.zIndex) : undefined,
+    }));
+  });
   const [selectedElementId, setSelectedElementId] = useState(null);
   const [labelSize, setLabelSize] = useState(label?.labelSize || { width: 100, height: 80 });
   const [showGrid, setShowGrid] = useState(true);
@@ -200,7 +216,22 @@ const LabelDesigner = ({
   // Sync state when label prop changes
   useEffect(() => {
     if (label) {
-      setElements(label.elements || []);
+      const numericElements = (label.elements || []).map(el => ({
+        ...el,
+        x: Number(el.x ?? 50),
+        y: Number(el.y ?? 50),
+        width: Number(el.width ?? 100),
+        height: Number(el.height ?? 30),
+        x1: el.x1 !== undefined ? Number(el.x1) : undefined,
+        y1: el.y1 !== undefined ? Number(el.y1) : undefined,
+        x2: el.x2 !== undefined ? Number(el.x2) : undefined,
+        y2: el.y2 !== undefined ? Number(el.y2) : undefined,
+        borderWidth: el.borderWidth !== undefined ? Number(el.borderWidth) : undefined,
+        fontSize: el.fontSize !== undefined ? Number(el.fontSize) : undefined,
+        rotation: el.rotation !== undefined ? Number(el.rotation) : undefined,
+        zIndex: el.zIndex !== undefined ? Number(el.zIndex) : undefined,
+      }));
+      setElements(numericElements);
       setLabelSize(label.labelSize || { width: 100, height: 80 });
       setSelectedElementId(null);
     }
@@ -487,7 +518,49 @@ const LabelDesigner = ({
 
   const updateElement = (id, updates) => {
     setElements((prev) =>
-      prev.map((el) => (el.id === id ? { ...el, ...updates } : el))
+      prev.map((el) => {
+        if (el.id === id) {
+          const updated = { ...el, ...updates };
+          if (el.type === "line") {
+            if (updates.width !== undefined || updates.height !== undefined) {
+              const currentX1 = el.x1 !== undefined ? el.x1 : el.x;
+              const currentY1 = el.y1 !== undefined ? el.y1 : el.y;
+              const currentX2 = el.x2 !== undefined ? el.x2 : el.x + el.width;
+              const currentY2 = el.y2 !== undefined ? el.y2 : el.y + el.height;
+
+              const w = updates.width !== undefined ? updates.width : el.width;
+              const h = updates.height !== undefined ? updates.height : el.height;
+
+              const xSign = currentX2 >= currentX1 ? 1 : -1;
+              const ySign = currentY2 >= currentY1 ? 1 : -1;
+
+              updated.x2 = currentX1 + w * xSign;
+              updated.y2 = currentY1 + h * ySign;
+              updated.x = Math.min(currentX1, updated.x2);
+              updated.y = Math.min(currentY1, updated.y2);
+              updated.width = w;
+              updated.height = h;
+            } else if (updates.x !== undefined || updates.y !== undefined) {
+              const currentX1 = el.x1 !== undefined ? el.x1 : el.x;
+              const currentY1 = el.y1 !== undefined ? el.y1 : el.y;
+              const currentX2 = el.x2 !== undefined ? el.x2 : el.x + el.width;
+              const currentY2 = el.y2 !== undefined ? el.y2 : el.y + el.height;
+
+              const dx = updates.x !== undefined ? (updates.x - el.x) : 0;
+              const dy = updates.y !== undefined ? (updates.y - el.y) : 0;
+
+              updated.x1 = currentX1 + dx;
+              updated.x2 = currentX2 + dx;
+              updated.y1 = currentY1 + dy;
+              updated.y2 = currentY2 + dy;
+              updated.x = Math.min(updated.x1, updated.x2);
+              updated.y = Math.min(updated.y1, updated.y2);
+            }
+          }
+          return updated;
+        }
+        return el;
+      })
     );
   };
 
@@ -1092,41 +1165,115 @@ const LabelDesigner = ({
                     <p className="text-[9px] text-gray-400 mb-2">
                       Preview: <span className="font-mono text-indigo-500">{String(runningStart).padStart(runningPad, '0')}, {String(runningStart + 1).padStart(runningPad, '0')}, ... {String(runningEnd).padStart(runningPad, '0')}</span>
                     </p>
-                    <button
-                      onClick={() => {
-                        const placeholder = `{{running_number:${runningStart}:${runningEnd}:${runningPad}}}`;
-                        const element = {
-                          id: generateId(),
-                          type: "text",
-                          x: 50,
-                          y: 50,
-                          width: 120,
-                          height: 30,
-                          content: placeholder,
-                          fontSize: 14,
-                          fontFamily: "Arial",
-                          fontWeight: "normal",
-                          fontStyle: "normal",
-                          textDecoration: "none",
-                          textAlign: "left",
-                          color: "#000000",
-                          backgroundColor: "transparent",
-                          borderWidth: 0,
-                          borderColor: "transparent",
-                          borderStyle: "solid",
-                          rotation: 0,
-                          zIndex: elements.length,
-                        };
-                        const nextElements = [...elements, element];
-                        setElements(nextElements);
-                        setSelectedElementId(element.id);
-                        canvasRef.current?.saveToHistory(nextElements);
-                        setShowRunningNumberDropdown(false);
-                      }}
-                      className="w-full py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                    >
-                      + Insert Running Number
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const placeholder = `{{running_number:${runningStart}:${runningEnd}:${runningPad}}}`;
+                          if (selectedElementId) {
+                             const el = elements.find(e => e.id === selectedElementId);
+                             if (['text', 'barcode', 'placeholder'].includes(el.type)) {
+                                updateElement(selectedElementId, { content: (el.content || "") + placeholder });
+                                setShowRunningNumberDropdown(false);
+                                return;
+                             }
+                          }
+                          const element = {
+                            id: generateId(),
+                            type: "text",
+                            x: 50,
+                            y: 50,
+                            width: 120,
+                            height: 30,
+                            content: placeholder,
+                            fontSize: 14,
+                            fontFamily: "Arial",
+                            fontWeight: "normal",
+                            fontStyle: "normal",
+                            textDecoration: "none",
+                            textAlign: "left",
+                            color: "#000000",
+                            backgroundColor: "transparent",
+                            borderWidth: 0,
+                            borderColor: "transparent",
+                            borderStyle: "solid",
+                            rotation: 0,
+                            zIndex: elements.length,
+                          };
+                          const nextElements = [...elements, element];
+                          setElements(nextElements);
+                          setSelectedElementId(element.id);
+                          canvasRef.current?.saveToHistory(nextElements);
+                          setShowRunningNumberDropdown(false);
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                      >
+                        + As Text
+                      </button>
+                      <button
+                        onClick={() => {
+                          const placeholder = `{{running_number:${runningStart}:${runningEnd}:${runningPad}}}`;
+                          const element = {
+                            id: generateId(),
+                            type: "barcode",
+                            barcodeType: "CODE128",
+                            x: 50,
+                            y: 50,
+                            width: 200,
+                            height: 80,
+                            content: placeholder,
+                            fontSize: 14,
+                            fontFamily: "Arial",
+                            color: "#000000",
+                            backgroundColor: "#ffffff",
+                            borderWidth: 0,
+                            borderColor: "#000000",
+                            borderStyle: "solid",
+                            rotation: 0,
+                            zIndex: elements.length,
+                          };
+                          const nextElements = [...elements, element];
+                          setElements(nextElements);
+                          setSelectedElementId(element.id);
+                          canvasRef.current?.saveToHistory(nextElements);
+                          setShowRunningNumberDropdown(false);
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                      >
+                        + As Barcode
+                      </button>
+                      <button
+                        onClick={() => {
+                          const placeholder = `{{running_number:${runningStart}:${runningEnd}:${runningPad}}}`;
+                          const element = {
+                            id: generateId(),
+                            type: "barcode",
+                            barcodeType: "QR",
+                            x: 50,
+                            y: 50,
+                            width: 100,
+                            height: 100,
+                            content: placeholder,
+                            fontSize: 14,
+                            fontFamily: "Arial",
+                            color: "#000000",
+                            backgroundColor: "#ffffff",
+                            borderWidth: 0,
+                            borderColor: "#000000",
+                            borderStyle: "solid",
+                            rotation: 0,
+                            zIndex: elements.length,
+                          };
+                          const nextElements = [...elements, element];
+                          setElements(nextElements);
+                          setSelectedElementId(element.id);
+                          canvasRef.current?.saveToHistory(nextElements);
+                          setShowRunningNumberDropdown(false);
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+                      >
+                        + As QR
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

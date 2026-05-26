@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import BarcodeElement from "../designer/code";
 import { printService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
+import renderShapeContent, { isShapeType } from "../../utils/renderShapeContent";
 
 const MM_TO_PX = 3.7795275591;
 
@@ -142,33 +143,72 @@ const RenderLabel = ({ label }) => {
           boxSizing: "border-box",
         };
 
-        if (element.type === "text" || element.type === "placeholder") {
+        if (element.type === "text") {
           return (
             <div
               key={elIndex}
               style={{
                 ...style,
+                border: element.borderWidth > 0
+                  ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
+                  : 'none',
+                fontWeight: element.fontWeight || "normal",
+                fontStyle: element.fontStyle || "normal",
+                textDecoration: element.textDecoration || "none",
+                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                lineHeight: element.lineHeight || 1.2,
                 display: "flex",
-                alignItems: "center",
-                justifyContent:
-                  element.textAlign === "center"
-                    ? "center"
-                    : element.textAlign === "right"
-                      ? "flex-end"
-                      : "flex-start",
-                padding: "0 4px",
-                lineHeight: "1.2",
+                alignItems: "flex-start",
+                padding: '4px 6px',
+                backgroundColor: element.backgroundColor || 'transparent',
               }}
             >
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {element.content}
-              </span>
+              <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'flex-start' }}>
+                <span
+                  style={{
+                    width: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    textAlignLast: element.textAlign === 'justify' ? 'justify' : 'auto',
+                  }}
+                >
+                  {element.content}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
+        if (element.type === "placeholder") {
+          return (
+            <div
+              key={elIndex}
+              style={{
+                ...style,
+                border: element.borderWidth > 0
+                  ? `${element.borderWidth}px ${element.borderStyle || 'solid'} ${element.borderColor || '#000000'}`
+                  : '1px dashed rgba(0,0,0,0.2)',
+                backgroundColor: "rgba(251,191,36,0.05)",
+                display: "flex",
+                alignItems: "center",
+                fontWeight: element.fontWeight || "normal",
+                fontStyle: element.fontStyle || "normal",
+                textDecoration: element.textDecoration || "none",
+                letterSpacing: element.letterSpacing ? `${element.letterSpacing}px` : undefined,
+                lineHeight: element.lineHeight || 1.2,
+                padding: "0",
+              }}
+            >
+              <div style={{ width: '100%', overflow: 'hidden' }}>
+                <span
+                  className="whitespace-nowrap font-mono text-sm w-full overflow-hidden"
+                  style={{ color: element.color || "#f59e0b" }}
+                >
+                  {element.content || "{{placeholder}}"}
+                </span>
+              </div>
             </div>
           );
         }
@@ -219,18 +259,19 @@ const RenderLabel = ({ label }) => {
               key={elIndex}
               style={{
                 position: "absolute",
-                left: Math.min(x1, x2),
-                top: Math.min(y1, y2),
-                width: Math.abs(x2 - x1),
-                height: Math.abs(y2 - y1),
-                overflow: "visible",
+                left: 0,
+                top: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: element.zIndex || 0,
+                pointerEvents: "none",
               }}
             >
               <line
-                x1={x1 < x2 ? 0 : Math.abs(x2 - x1)}
-                y1={y1 < y2 ? 0 : Math.abs(y2 - y1)}
-                x2={x1 < x2 ? Math.abs(x2 - x1) : 0}
-                y2={y1 < y2 ? Math.abs(y2 - y1) : 0}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
                 stroke={element.borderColor || "#000000"}
                 strokeWidth={element.borderWidth || 2}
                 strokeDasharray={
@@ -245,13 +286,37 @@ const RenderLabel = ({ label }) => {
           );
         }
 
-        if (element.type === "rectangle") {
-          return <div key={elIndex} style={style}></div>;
+        // All shape types (rectangle, circle, dot, triangle, stars, arrows, etc.)
+        if (isShapeType(element.type)) {
+          return (
+            <div
+              key={elIndex}
+              style={{
+                ...style,
+                backgroundColor: "transparent",
+                border: "none",
+              }}
+            >
+              {renderShapeContent(element)}
+            </div>
+          );
         }
 
-        if (element.type === "circle") {
+        if (element.type === "image") {
           return (
-            <div key={elIndex} style={{ ...style, borderRadius: "50%" }}></div>
+            <div key={elIndex} style={style}>
+              <img
+                src={element.src || element.content}
+                alt={element.alt || ""}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: element.objectFit || "contain",
+                  display: "block",
+                }}
+                crossOrigin="anonymous"
+              />
+            </div>
           );
         }
 

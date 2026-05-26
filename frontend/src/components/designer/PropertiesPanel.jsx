@@ -130,15 +130,44 @@ const PropertiesPanel = ({
   const NumInput = ({ label, value, onChange, min, max, step = 1 }) => (
     <div>
       <Label>{label}</Label>
-      <input
-        type="number"
-        value={value ?? 0}
-        onChange={(e) => onChange(Number(e.target.value))}
-        min={min}
-        max={max}
-        step={step}
-        className="input text-xs py-1.5 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
+      <div className="flex items-center border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-bg-main)]">
+        <button
+          type="button"
+          onClick={() => {
+            const newVal = Number(((value ?? 0) - step).toFixed(2));
+            if (min !== undefined && newVal < min) return;
+            onChange(newVal);
+          }}
+          className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold text-xs select-none transition-colors border-r border-[var(--color-border)]"
+        >
+          -
+        </button>
+        <input
+          type="number"
+          value={value ?? 0}
+          onChange={(e) => {
+            let val = Number(e.target.value);
+            if (min !== undefined && val < min) val = min;
+            if (max !== undefined && val > max) val = max;
+            onChange(val);
+          }}
+          min={min}
+          max={max}
+          step={step}
+          className="text-center text-xs py-1 w-full bg-transparent border-0 outline-none focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button
+          type="button"
+          onClick={() => {
+            const newVal = Number(((value ?? 0) + step).toFixed(2));
+            if (max !== undefined && newVal > max) return;
+            onChange(newVal);
+          }}
+          className="px-2.5 py-1.5 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold text-xs select-none transition-colors border-l border-[var(--color-border)]"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 
@@ -446,12 +475,8 @@ const PropertiesPanel = ({
               <div className="grid grid-cols-2 gap-2">
                 <NumInput label="X (px)" value={Math.round(el.x)} onChange={(v) => updateElement(id, { x: v })} />
                 <NumInput label="Y (px)" value={Math.round(el.y)} onChange={(v) => updateElement(id, { y: v })} />
-                {el.type !== 'line' && (
-                  <>
-                    <NumInput label="Width (px)" value={Math.round(el.width)} onChange={(v) => updateElement(id, { width: v })} />
-                    <NumInput label="Height (px)" value={Math.round(el.height)} onChange={(v) => updateElement(id, { height: v })} />
-                  </>
-                )}
+                <NumInput label="Width (px)" value={Math.round(el.width)} onChange={(v) => updateElement(id, { width: v })} />
+                <NumInput label="Height (px)" value={Math.round(el.height)} onChange={(v) => updateElement(id, { height: v })} />
               </div>
               {/* Rotation */}
               {el.type !== 'line' && (

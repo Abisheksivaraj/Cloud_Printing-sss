@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { X, Printer, Settings, RefreshCw, Check, LayoutGrid, Ruler, Type, Move, Sliders } from "lucide-react";
 import { useTheme } from "../../ThemeContext";
 
+import { getLocalPrinters, getDefaultPrinter, connectQZ } from "../../utils/qzPrinter";
+
 /*
   CreateLabelModal Component
   Refactored to align with the new design system.
@@ -56,24 +58,28 @@ const CreateLabelModal = ({ onClose, onCreate }) => {
     fetchAvailablePrinters();
   }, []);
 
-  const fetchAvailablePrinters = async () => {
-    setIsLoadingPrinters(true);
-    try {
-      const response = await fetch("https://cloud-printing-sss.onrender.com/api/printers");
-      if (response.ok) {
-        const data = await response.json();
-        setAvailablePrinters(data.printers || []);
-        if (data.printers && data.printers.length > 0) {
-          const defaultPrinter = data.printers.find((p) => p.isDefault);
-          setSelectedPrinter(defaultPrinter ? defaultPrinter.name : data.printers[0].name);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching printers:", error);
-    } finally {
-      setIsLoadingPrinters(false);
-    }
-  };
+  const [qzNotInstalled, setQzNotInstalled] = useState(false);
+ 
+const fetchAvailablePrinters = async () => {
+  setIsLoadingPrinters(true);
+  try {
+    // Try QZ Tray first (works both local and deployed)
+    const printers = await getLocalPrinters();
+    setAvailablePrinters(printers);
+
+    const defaultName = await getDefaultPrinter();
+    const defaultPrinter = printers.find(p => p.name === defaultName);
+    setSelectedPrinter(defaultPrinter ? defaultPrinter.name : printers[0]?.name);
+
+  } catch (error) {
+    console.error("QZ Tray not available:", error);
+    setAvailablePrinters([]);
+    // Show install prompt
+    setQzNotInstalled(true);
+  } finally {
+    setIsLoadingPrinters(false);
+  }
+};
 
   const handlePrinterChange = async (printerName) => {
     setSelectedPrinter(printerName);
@@ -280,32 +286,49 @@ const CreateLabelModal = ({ onClose, onCreate }) => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>Target Printer</label>
-                      <button
-                        onClick={fetchAvailablePrinters}
-                        disabled={isLoadingPrinters}
-                        className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] hover:underline flex items-center gap-1"
-                      >
-                        <RefreshCw size={12} className={isLoadingPrinters ? "animate-spin" : ""} /> Refresh
-                      </button>
-                    </div>
-                    <div className="relative group">
-                      <Printer size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <select
-                        value={selectedPrinter}
-                        onChange={(e) => handlePrinterChange(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 rounded-xl border-2 font-bold outline-none transition-all focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 appearance-none cursor-pointer"
-                        style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}
-                      >
-                        {availablePrinters.length === 0 && <option>No printers found</option>}
-                        {availablePrinters.map(p => (
-                          <option key={p.name} value={p.name}>{p.displayName || p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                 <div className="space-y-3">
+  <div className="flex items-center justify-between">
+    <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>Target Printer</label>
+    <button
+      onClick={fetchAvailablePrinters}
+      disabled={isLoadingPrinters}
+      className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-primary)] hover:underline flex items-center gap-1"
+    >
+      <RefreshCw size={12} className={isLoadingPrinters ? "animate-spin" : ""} /> Refresh
+    </button>
+  </div>
+  <div className="relative group">
+    <Printer size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+    <select
+      value={selectedPrinter}
+      onChange={(e) => handlePrinterChange(e.target.value)}
+      className="w-full pl-12 pr-4 py-4 rounded-xl border-2 font-bold outline-none transition-all focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10 appearance-none cursor-pointer"
+      style={{ backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }}
+    >
+      {availablePrinters.length === 0 && <option>No printers found</option>}
+      {availablePrinters.map(p => (
+        <option key={p.name} value={p.name}>{p.displayName || p.name}</option>
+      ))}
+    </select>
+  </div>
+
+  {/* ⬇️ ADD THIS RIGHT HERE - below the select, inside the same space-y-3 div */}
+  {qzNotInstalled && (
+    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+      <p className="font-bold mb-1">⚠️ Printer agent not detected</p>
+      <p className="mb-2">To print from this app, please install QZ Tray (free, one-time setup).</p>
+      
+      <a
+        href="https://qz.io/download"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-block px-3 py-1.5 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition-colors"
+      >
+        Download QZ Tray (Free)
+      </a>
+    </div>
+  )}
+</div>
 
                   <div className="space-y-3">
                     <label className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.textMuted }}>Preset Size</label>
