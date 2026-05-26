@@ -3,7 +3,7 @@ import { X, Printer, Settings, Maximize2, Minimize2, Check } from "lucide-react"
 import BarcodeElement from "../designer/code";
 import { useTheme } from "../../ThemeContext";
 import { printService, authService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
-import { printLabel, connectQZ } from "../../utils/qzPrinter";
+import { printLabel, connectQZ, getLocalPrinters } from "../../utils/qzPrinter";
 import renderShapeContent, { isShapeType } from "../../utils/renderShapeContent";
 const MM_TO_PX = 3.7795275591;
 
@@ -348,14 +348,13 @@ const PrintPreviewModal = ({ label, onClose }) => {
       try {
         setLoadingPrinters(true);
         setPrinterError(null);
-        const data = await apiCall(API_ENDPOINTS.PRINTERS);
-        const list = data.printers || [];
+        const list = await getLocalPrinters();
         setPrinters(list);
         const def = list.find((p) => p.isDefault);
         setSelectedPrinter(def ? def.name : list[0]?.name || "");
       } catch (err) {
         console.error("Failed to load printers:", err);
-        setPrinterError("Could not load printers");
+        setPrinterError("Could not load printers via QZ Tray. Is it running?");
       } finally {
         setLoadingPrinters(false);
       }

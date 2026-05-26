@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import BarcodeElement from "../designer/code";
 import { printService, apiCall, API_ENDPOINTS } from "../../config/apiConfig";
+import { getLocalPrinters } from "../../utils/qzPrinter";
 import renderShapeContent, { isShapeType } from "../../utils/renderShapeContent";
 
 const MM_TO_PX = 3.7795275591;
@@ -384,26 +385,16 @@ const RollPrinterPreview = ({ labels, labelSettings, onClose }) => {
       let printerError = null;
 
       try {
-        const printersData = await apiCall(API_ENDPOINTS.PRINTERS);
-        if (printersData.printers?.length > 0) {
-          const defaultPrinter = printersData.printers.find(p => p.isDefault) || printersData.printers[0];
+        const printersList = await getLocalPrinters();
+        if (printersList && printersList.length > 0) {
+          const defaultPrinter = printersList.find(p => p.isDefault) || printersList[0];
           printerName = defaultPrinter.name;
-
-          // Check specific printer status
-          try {
-            const statusData = await apiCall(API_ENDPOINTS.PRINTER_STATUS(printerName));
-            printerConnected = statusData.isConnected;
-            if (!printerConnected) {
-              printerError = `Printer "${printerName}" is offline or disconnected`;
-            }
-          } catch (statusErr) {
-            printerError = `Unable to check status of printer "${printerName}": ${statusErr.message}`;
-          }
+          printerConnected = true; // QZ Tray assumes it's available locally
         } else {
-          printerError = "No printers found. Please connect a printer and try again.";
+          printerError = "No printers found via QZ Tray. Please check your local printers.";
         }
       } catch (e) {
-        printerError = `Could not fetch printers: ${e.message}`;
+        printerError = `Could not fetch printers via QZ Tray: ${e.message}`;
       }
 
       // Calculate print metrics
